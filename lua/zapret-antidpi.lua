@@ -93,7 +93,7 @@ function drop(ctx, desync)
 end
 
 -- nfqws1 : "--dup"
--- standard args : direction, fooling, ip_id, rawsend, reconstruct
+-- standard args : direction, fooling, ip_id, ipfrag, rawsend, reconstruct
 function send(ctx, desync)
 	direction_cutoff_opposite(ctx, desync, "any")
 	if direction_check(desync, "any") then
