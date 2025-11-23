@@ -11,3 +11,4 @@ v0.1.2
 * nfqws2: 'mtproto' protocol, 'mtproto_initial' payload
 * nfqws2: 'known' protocol and payload filter
 * nfqws2: 'aes_ctr' luacall
+* zapret-antidpi: rst

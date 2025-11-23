@@ -323,6 +323,31 @@ function syndata(ctx, desync)
 	end
 end
 
+-- nfqws1 : "--dpi-desync=rst"
+-- standard args : direction, payload, fooling, ip_id, rawsend, reconstruct, ipfrag
+-- arg : rstack - send RST,ACK instead of RST
+function rst(ctx, desync)
+	if not desync.dis.tcp then
+		instance_cutoff(ctx)
+		return
+	end
+	direction_cutoff_opposite(ctx, desync)
+	if direction_check(desync, "any") and payload_check(desync) then
+		if replay_first(desync) then
+			local dis = deepcopy(desync.dis)
+			dis.payload = ""
+			dis.tcp.th_flags = TH_RST + (desync.arg.rstack and TH_ACK or 0)
+			apply_fooling(desync, dis)
+			apply_ip_id(desync, dis, nil, "none")
+			DLOG("rst")
+			-- it uses rawsend, reconstruct and ipfrag options
+			rawsend_dissect_ipfrag(dis, desync_opts(desync))
+		else
+			DLOG("rst: not acting on further replay pieces")
+		end
+	end
+end
+
 -- nfqws1 : "--dpi-desync=fake"
 -- standard args : direction, payload, fooling, ip_id, rawsend, reconstruct, ipfrag
 -- arg : blob=<blob> - fake payload

@@ -12,7 +12,7 @@ void aes_ctr_xcrypt_buffer(aes_context *ctx, const uint8_t *iv, const uint8_t *i
 
 	for (i = 0, bi = AES_BLOCKLEN; i < length; ++i, ++bi)
 	{
-		if (bi == AES_BLOCKLEN) /* we need to regen xor compliment in buffer */
+		if (bi == AES_BLOCKLEN) /* we need to regen xor complement in buffer */
 		{
 			memcpy(buffer, ivc, AES_BLOCKLEN);
 			aes_cipher(ctx, buffer, buffer);
