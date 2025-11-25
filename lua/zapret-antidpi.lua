@@ -79,7 +79,7 @@ function luaexec(ctx, desync)
 	end
 	local fname = desync.func_instance.."_luaexec_code"
 	if not _G[fname] then
-		_G[fname] = loadstring(desync.arg.code, fname)
+		_G[fname] = load(desync.arg.code, fname)
 	end
 	-- allow dynamic code to access desync
 	_G.desync = desync

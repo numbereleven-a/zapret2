@@ -1039,7 +1039,7 @@ void lua_pushf_args(const struct ptr_list_head *args, int idx_desync)
 		else if (val[0]=='#')
 		{
 			lua_push_blob(idx_desync, val+1);
-			lua_Integer len = lua_objlen(params.L, -1);
+			lua_Integer len = lua_rawlen(params.L, -1);
 			lua_pop(params.L,1);
 			lua_pushf_int(var, len);
 		}

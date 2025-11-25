@@ -36,6 +36,7 @@ void lua_do_gc(void);
 
 #if LUA_VERSION_NUM < 502
 int lua_absindex(lua_State *L, int idx);
+#define lua_rawlen lua_objlen
 #endif
 
 // push - create object and push to the stack
