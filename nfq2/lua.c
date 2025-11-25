@@ -411,7 +411,6 @@ static int luacall_aes(lua_State *L)
 	if (input_len!=16)
 		luaL_error(L, "aes: wrong data length %u. should be 16.", (unsigned)input_len);
 
-	aes_init_keygen_tables();
 	aes_context ctx;
 	uint8_t output[16];
 	if (aes_setkey(&ctx, bEncrypt, key, key_len) || aes_cipher(&ctx, input, output))

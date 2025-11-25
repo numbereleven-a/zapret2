@@ -1151,8 +1151,6 @@ bool QUICDecryptInitial(const uint8_t *data, size_t data_len, uint8_t *clean, si
 	pn_offset += tvb_get_varint(data + pn_offset, &payload_len);
 	if (payload_len<20 || (pn_offset + payload_len)>data_len) return false;
 
-	aes_init_keygen_tables();
-
 	uint8_t sample_enc[16];
 	aes_context ctx;
 	if (aes_setkey(&ctx, 1, aeshp, sizeof(aeshp)) || aes_cipher(&ctx, data + pn_offset + 4, sample_enc)) return false;
@@ -1390,13 +1388,29 @@ bool IsStunBindingRequest(const uint8_t *data, size_t len)
 		ntohl(*(uint32_t*)(&data[4]))==0x2112A442 && // magic cookie
 		ntohs(*(uint16_t*)(&data[2]))==len-20;
 }
+#if defined(__GNUC__) && !defined(__llvm__)
+__attribute__((optimize ("no-strict-aliasing")))
+#endif
 bool IsMTProto(const uint8_t *data, size_t len)
 {
 	if (len>=64)
 	{
+/*
 		uint8_t decrypt[64];
 		aes_ctr_crypt(data+8, 32, data+40, data, 64, decrypt);
 		return !memcmp(decrypt+56,"\xEF\xEF\xEF\xEF",4);
+*/
+		// this way requires only one AES instead of 4
+		uint8_t decrypt[16], iv[16];
+		aes_context ctx;
+
+		memcpy(iv, data+40, 16);
+		ctr_add(iv,3);
+		if (!aes_setkey(&ctx, AES_ENCRYPT, data+8, 32) && !aes_cipher(&ctx, iv, decrypt))
+		{
+			*((uint64_t*)(decrypt+8)) ^= *((uint64_t*)(data+56));
+			return !memcmp(decrypt+8,"\xEF\xEF\xEF\xEF",4);
+		}
 	}
 	return false;
 }
