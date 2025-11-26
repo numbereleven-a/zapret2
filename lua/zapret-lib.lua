@@ -701,6 +701,7 @@ function packet_len(dis)
 	return l3l4_len(dis) + #dis.payload
 end
 
+-- option : ipfrag.ipfrag_disorder - send fragments from last to first
 function rawsend_dissect_ipfrag(dis, options)
 	if options and options.ipfrag and options.ipfrag.ipfrag then
 		local frag_func = options.ipfrag.ipfrag=="" and "ipfrag2" or options.ipfrag.ipfrag
@@ -925,7 +926,6 @@ end
 -- option : ipfrag_pos_udp - udp frag position. ipv4 : starting from L4 header. ipb6: starting from fragmentable part. must be multiple of 8. default 8
 -- option : ipfrag_pos_tcp - tcp frag position. ipv4 : starting from L4 header. ipb6: starting from fragmentable part. must be multiple of 8. default 32
 -- option : ipfrag_next - next protocol field in ipv6 fragment extenstion header of the second fragment. same as first by default.
--- option : ipfrag_disorder - send fragments from last to first
 function ipfrag2(dis, ipfrag_options)
 	local function frag_idx(exthdr)
 		-- fragment header after hopbyhop, destopt, routing
