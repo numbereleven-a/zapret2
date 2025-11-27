@@ -1,3 +1,21 @@
+function pcap_write_header(file)
+	-- big endian, nanoseconds in timestamps, ver 2.4, max packet size - 0x4000 (16384), 0x65 - l3 packets without l2
+	file:write("\xA1\xB2\x3C\x4D\x00\x02\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x65")
+end
+function pcap_write_packet(file, raw)
+	local sec, nsec = clock_gettime();
+	file:write(bu32(sec)..bu32(nsec)..bu32(#raw)..bu32(#raw))
+	file:write(raw)
+	file:close()
+end
+function pcap_write(file, raw)
+	local pos = file:seek()
+	if (pos==0) then
+		pcap_write_header(file)
+	end
+	pcap_write_packet(file, raw)
+end
+
 -- test case : nfqws2 --qnum 200 --debug --lua-init=@zapret-lib.lua --lua-init=@zapret-pcap.lua --writeable=zdir --in-range=a --lua-desync=pcap:file=test.pcap
 -- arg : file=<filename> - file for storing pcap data. if --writeable is specified and filename is relative - append filename to writeable path
 function pcap(ctx, desync)
@@ -7,19 +25,12 @@ function pcap(ctx, desync)
 	local fn_cache_name = desync.func_instance.."_fn"
 	if not _G[fn_cache_name] then
 		_G[fn_cache_name] = writeable_file_name(desync.arg.file)
+		-- overwrite file
+		os.remove(_G[fn_cache_name])
 	end
 	local f = io.open(_G[fn_cache_name], "a")
 	if not f then
 		error("pcap: could not write to '".._G[fn_cache_name].."'")
 	end
-	local pos = f:seek()
-	if (pos==0) then
-		-- create pcap header
-		f:write("\xA1\xB2\x3C\x4D\x00\x02\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x65")
-	end
-	local raw = raw_packet(ctx)
-	local sec, nsec = clock_gettime();
-	f:write(bu32(sec)..bu32(nsec)..bu32(#raw)..bu32(#raw))
-	f:write(raw)
-	f:close()
+	pcap_write(f, raw_packet(ctx))
 end
