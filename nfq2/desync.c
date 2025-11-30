@@ -1169,7 +1169,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 			if (l7proto == L7_UNKNOWN)
 			{
 				l7proto = L7_HTTP;
-				if (ctrack) ctrack->l7proto = l7proto;
+				if (ctrack && ctrack->l7proto == L7_UNKNOWN) ctrack->l7proto = l7proto;
 			}
 
 			// we do not reassemble http
@@ -1201,7 +1201,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 			if (l7proto == L7_UNKNOWN)
 			{
 				l7proto = L7_TLS;
-				if (ctrack->l7proto == L7_UNKNOWN) ctrack->l7proto = l7proto;
+				if (ctrack && ctrack->l7proto == L7_UNKNOWN) ctrack->l7proto = l7proto;
 			}
 
 			if (bReqFull) TLSDebug(rdata_payload, rlen_payload);
@@ -1271,7 +1271,6 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 			};
 			protocol_probe(testers, sizeof(testers) / sizeof(*testers), dis->data_payload, dis->len_payload, ctrack, &l7proto, &l7payload);
 		}
-
 		if (ctrack && ctrack->req_seq_finalized)
 		{
 			uint32_t dseq = ctrack->seq_last - ctrack->req_seq_end;
