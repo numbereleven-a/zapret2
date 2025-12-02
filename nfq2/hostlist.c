@@ -258,7 +258,7 @@ static bool HostlistCheck_(const struct hostlist_collection_head *hostlists, con
 // return : true = apply fooling, false = do not apply
 bool HostlistCheck(const struct desync_profile *dp, const char *host, bool no_match_subdomains, bool *excluded, bool bSkipReloadCheck)
 {
-	DLOG("* hostlist check for profile %u\n",dp->n);
+	DLOG("* hostlist check for profile %u (%s)\n",dp->n,PROFILE_NAME(dp));
 	return HostlistCheck_(&dp->hl_collection, &dp->hl_collection_exclude, host, no_match_subdomains, excluded, bSkipReloadCheck);
 }
 
@@ -323,18 +323,18 @@ void HostlistsDebug()
 			if (hl_item->hfile!=dpl->dp.hostlist_auto)
 			{
 				if (hl_item->hfile->filename)
-					DLOG("profile %u include hostlist %s%s\n",dpl->dp.n, hl_item->hfile->filename,hl_item->hfile->hostlist ? "" : " (empty)");
+					DLOG("profile %u (%s) include hostlist %s%s\n",dpl->dp.n, PROFILE_NAME(&dpl->dp), hl_item->hfile->filename,hl_item->hfile->hostlist ? "" : " (empty)");
 				else
-					DLOG("profile %u include fixed hostlist%s\n",dpl->dp.n, hl_item->hfile->hostlist ? "" : " (empty)");
+					DLOG("profile %u (%s) include fixed hostlist%s\n",dpl->dp.n, PROFILE_NAME(&dpl->dp), hl_item->hfile->hostlist ? "" : " (empty)");
 			}
 		LIST_FOREACH(hl_item, &dpl->dp.hl_collection_exclude, next)
 		{
 			if (hl_item->hfile->filename)
-				DLOG("profile %u exclude hostlist %s%s\n",dpl->dp.n,hl_item->hfile->filename,hl_item->hfile->hostlist ? "" : " (empty)");
+				DLOG("profile %u (%s) exclude hostlist %s%s\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),hl_item->hfile->filename,hl_item->hfile->hostlist ? "" : " (empty)");
 			else
-				DLOG("profile %u exclude fixed hostlist%s\n",dpl->dp.n,hl_item->hfile->hostlist ? "" : " (empty)");
+				DLOG("profile %u (%s) exclude fixed hostlist%s\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),hl_item->hfile->hostlist ? "" : " (empty)");
 		}
 		if (dpl->dp.hostlist_auto)
-			DLOG("profile %u auto hostlist %s%s\n",dpl->dp.n,dpl->dp.hostlist_auto->filename,dpl->dp.hostlist_auto->hostlist ? "" : " (empty)");
+			DLOG("profile %u (%s) auto hostlist %s%s\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),dpl->dp.hostlist_auto->filename,dpl->dp.hostlist_auto->hostlist ? "" : " (empty)");
 	}
 }

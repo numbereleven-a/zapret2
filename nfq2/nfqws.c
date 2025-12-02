@@ -99,7 +99,7 @@ static void onusr2(int sig)
 	struct desync_profile_list *dpl;
 	LIST_FOREACH(dpl, &params.desync_profiles, next)
 	{
-		printf("\nDESYNC profile %u\n", dpl->dp.n);
+		printf("\nDESYNC profile %u (%s)\n", dpl->dp.n, PROFILE_NAME(&dpl->dp));
 		HostFailPoolDump(dpl->dp.hostlist_auto_fail_counters);
 	}
 	printf("\nIPCACHE\n");
@@ -1165,7 +1165,7 @@ static void LuaDesyncDebug(struct desync_profile *dp)
 		int n,i;
 		LIST_FOREACH(func, &dp->lua_desync, next)
 		{
-			DLOG("profile %u lua %s(",dp->n,func->func);
+			DLOG("profile %u (%s) lua %s(",dp->n,PROFILE_NAME(dp),func->func);
 			n=0;
 			LIST_FOREACH(arg, &func->args, next)
 			{
@@ -1412,8 +1412,9 @@ static void exithelp(void)
 		" --lua-init=@<filename>|<lua_text>\t\t\t; load LUA program from a file or string. if multiple parameters present order of execution is preserved.\n"
 		" --lua-gc=<int>\t\t\t\t\t\t; forced garbage collection every N sec. default %u sec. triggers only when a packet arrives. 0 = disable.\n"
 		"\nMULTI-STRATEGY:\n"
-		" --new\t\t\t\t\t\t\t; begin new strategy\n"
-		" --skip\t\t\t\t\t\t\t; do not use this strategy\n"
+		" --new\t\t\t\t\t\t\t; begin new profile\n"
+		" --skip\t\t\t\t\t\t\t; do not use this profile\n"
+		" --name\t\t\t\t\t\t\t; set profile name\n"
 		" --filter-l3=ipv4|ipv6\t\t\t\t\t; L3 protocol filter. multiple comma separated values allowed.\n"
 		" --filter-tcp=[~]port1[-port2]|*\t\t\t; TCP port filter. ~ means negation. setting tcp and not setting udp filter denies udp. comma separated list allowed.\n"
 		" --filter-udp=[~]port1[-port2]|*\t\t\t; UDP port filter. ~ means negation. setting udp and not setting tcp filter denies tcp. comma separated list allowed.\n"
@@ -1563,6 +1564,7 @@ enum opt_indices {
 	IDX_HOSTLIST_AUTO_DEBUG,
 	IDX_NEW,
 	IDX_SKIP,
+	IDX_NAME,
 	IDX_FILTER_L3,
 	IDX_FILTER_TCP,
 	IDX_FILTER_UDP,
@@ -1643,6 +1645,7 @@ static const struct option long_options[] = {
 	[IDX_HOSTLIST_AUTO_DEBUG] = {"hostlist-auto-debug", required_argument, 0, 0},
 	[IDX_NEW] = {"new", no_argument, 0, 0},
 	[IDX_SKIP] = {"skip", no_argument, 0, 0},
+	[IDX_NAME] = {"name", required_argument, 0, 0},
 	[IDX_FILTER_L3] = {"filter-l3", required_argument, 0, 0},
 	[IDX_FILTER_TCP] = {"filter-tcp", required_argument, 0, 0},
 	[IDX_FILTER_UDP] = {"filter-udp", required_argument, 0, 0},
@@ -2138,6 +2141,14 @@ int main(int argc, char **argv)
 		case IDX_SKIP:
 			bSkip = true;
 			break;
+		case IDX_NAME:
+			free(dp->name);
+			if (!(dp->name = strdup(optarg)))
+			{
+				DLOG_ERR("out of memory\n");
+				exit_clean(1);
+			}
+			break;
 
 		case IDX_FILTER_L3:
 			if (!wf_make_l3(optarg, &dp->filter_ipv4, &dp->filter_ipv6))
@@ -2424,7 +2435,7 @@ int main(int argc, char **argv)
 
 	DLOG("adding low-priority default empty desync profile\n");
 	// add default empty profile
-	if (!(dpl = dp_list_add(&params.desync_profiles)))
+	if (!(dpl = dp_list_add(&params.desync_profiles)) || !(dpl->dp.name=strdup("no_action")))
 	{
 		DLOG_ERR("desync_profile_add: out of memory\n");
 		exit_clean(1);
@@ -2464,7 +2475,7 @@ int main(int argc, char **argv)
 		if (params.droproot)
 #endif
 		{
-			if (dp->hostlist_auto && ensure_file_access(dp->hostlist_auto->filename))
+			if (dp->hostlist_auto && !ensure_file_access(dp->hostlist_auto->filename))
 				DLOG_ERR("could not make '%s' accessible. auto hostlist file may not be writable after privilege drop\n", dp->hostlist_auto->filename);
 
 		}

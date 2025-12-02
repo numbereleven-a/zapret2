@@ -235,7 +235,7 @@ static bool IpsetCheck_(const struct ipset_collection_head *ips, const struct ip
 bool IpsetCheck(const struct desync_profile *dp, const struct in_addr *ipv4, const struct in6_addr *ipv6)
 {
 	if (PROFILE_IPSETS_ABSENT(dp)) return true;
-	DLOG("* ipset check for profile %u\n",dp->n);
+	DLOG("* ipset check for profile %u (%s)\n",dp->n,PROFILE_NAME(dp));
 	return IpsetCheck_(&dp->ips_collection,&dp->ips_collection_exclude,ipv4,ipv6);
 }
 
@@ -307,13 +307,13 @@ void IpsetsDebug()
 	{
 		LIST_FOREACH(ips_item, &dpl->dp.ips_collection, next)
 			if (ips_item->hfile->filename)
-				DLOG("profile %u include ipset %s (%s)\n",dpl->dp.n,ips_item->hfile->filename,dbg_ipset_fill(&ips_item->hfile->ipset));
+				DLOG("profile %u (%s) include ipset %s (%s)\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),ips_item->hfile->filename,dbg_ipset_fill(&ips_item->hfile->ipset));
 			else
-				DLOG("profile %u include fixed ipset (%s)\n",dpl->dp.n,dbg_ipset_fill(&ips_item->hfile->ipset));
+				DLOG("profile %u (%s) include fixed ipset (%s)\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),dbg_ipset_fill(&ips_item->hfile->ipset));
 		LIST_FOREACH(ips_item, &dpl->dp.ips_collection_exclude, next)
 			if (ips_item->hfile->filename)
-				DLOG("profile %u exclude ipset %s (%s)\n",dpl->dp.n,ips_item->hfile->filename,dbg_ipset_fill(&ips_item->hfile->ipset));
+				DLOG("profile %u (%s) exclude ipset %s (%s)\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),ips_item->hfile->filename,dbg_ipset_fill(&ips_item->hfile->ipset));
 			else
-				DLOG("profile %u exclude fixed ipset (%s)\n",dpl->dp.n,dbg_ipset_fill(&ips_item->hfile->ipset));
+				DLOG("profile %u (%s) exclude fixed ipset (%s)\n",dpl->dp.n,PROFILE_NAME(&dpl->dp),dbg_ipset_fill(&ips_item->hfile->ipset));
 	}
 }

@@ -369,6 +369,7 @@ static void dp_clear_dynamic(struct desync_profile *dp)
 	strlist_destroy(&dp->filter_ssid);
 #endif
 	HostFailPoolDestroy(&dp->hostlist_auto_fail_counters);
+	free(dp->name);
 }
 void dp_clear(struct desync_profile *dp)
 {

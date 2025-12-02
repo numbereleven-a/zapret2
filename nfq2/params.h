@@ -53,6 +53,7 @@ enum log_target { LOG_TARGET_CONSOLE=0, LOG_TARGET_FILE, LOG_TARGET_SYSLOG, LOG_
 struct desync_profile
 {
 	unsigned int n;	// number of the profile
+	char *name; // optional malloced name string
 
 	bool filter_ipv4,filter_ipv6;
 	struct port_filters_head pf_tcp,pf_udp;
@@ -78,6 +79,7 @@ struct desync_profile
 
 	struct func_list_head lua_desync;
 };
+#define PROFILE_NAME(dp) ((dp)->name ? (dp)->name : "noname")
 
 #define PROFILE_IPSETS_ABSENT(dp) (!LIST_FIRST(&(dp)->ips_collection) && !LIST_FIRST(&(dp)->ips_collection_exclude))
 #define PROFILE_IPSETS_EMPTY(dp) (ipset_collection_is_empty(&(dp)->ips_collection) && ipset_collection_is_empty(&(dp)->ips_collection_exclude))

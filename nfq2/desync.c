@@ -209,7 +209,7 @@ static struct desync_profile *dp_find(
 	{
 		if (dp_match(&dpl->dp, l3proto, ip, ip6, port, hostname, bNoSubdom, l7proto, ssid, bCheckDone, bCheckResult, bExcluded))
 		{
-			DLOG("desync profile %u matches\n", dpl->dp.n);
+			DLOG("desync profile %u (%s) matches\n", dpl->dp.n, PROFILE_NAME(&dpl->dp));
 			return &dpl->dp;
 		}
 	}
@@ -234,8 +234,8 @@ static void auto_hostlist_reset_fail_counter(struct desync_profile *dp, const ch
 		if (fail_counter)
 		{
 			HostFailPoolDel(&dp->hostlist_auto_fail_counters, fail_counter);
-			DLOG("auto hostlist (profile %u) : %s : fail counter reset. website is working.\n", dp->n, hostname);
-			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : fail counter reset. website is working.", hostname, dp->n, client_ip_port, l7proto_str(l7proto));
+			DLOG("auto hostlist (profile %u (%s)) : %s : fail counter reset. website is working.\n", dp->n, PROFILE_NAME(dp), hostname);
+			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : fail counter reset. website is working.", hostname, dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto));
 		}
 	}
 }
@@ -283,19 +283,19 @@ static void auto_hostlist_failed(struct desync_profile *dp, const char *hostname
 		}
 	}
 	fail_counter->counter++;
-	DLOG("auto hostlist (profile %u) : %s : fail counter %d/%d\n", dp->n, hostname, fail_counter->counter, dp->hostlist_auto_fail_threshold);
-	HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : fail counter %d/%d", hostname, dp->n, client_ip_port, l7proto_str(l7proto), fail_counter->counter, dp->hostlist_auto_fail_threshold);
+	DLOG("auto hostlist (profile %u (%s)) : %s : fail counter %d/%d\n", dp->n, PROFILE_NAME(dp), hostname, fail_counter->counter, dp->hostlist_auto_fail_threshold);
+	HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : fail counter %d/%d", hostname, dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto), fail_counter->counter, dp->hostlist_auto_fail_threshold);
 	if (fail_counter->counter >= dp->hostlist_auto_fail_threshold)
 	{
-		DLOG("auto hostlist (profile %u) : fail threshold reached. about to add %s to auto hostlist\n", dp->n, hostname);
+		DLOG("auto hostlist (profile %u (%s)) : fail threshold reached. about to add %s to auto hostlist\n", dp->n, PROFILE_NAME(dp), hostname);
 		HostFailPoolDel(&dp->hostlist_auto_fail_counters, fail_counter);
 
-		DLOG("auto hostlist (profile %u) : rechecking %s to avoid duplicates\n", dp->n, hostname);
+		DLOG("auto hostlist (profile %u (%s)) : rechecking %s to avoid duplicates\n", dp->n, PROFILE_NAME(dp), hostname);
 		bool bExcluded = false;
 		if (!HostlistCheck(dp, hostname, bNoSubdom, &bExcluded, false) && !bExcluded)
 		{
 			DLOG("auto hostlist (profile %u) : adding %s to %s\n", dp->n, hostname, dp->hostlist_auto->filename);
-			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : adding to %s", hostname, dp->n, client_ip_port, l7proto_str(l7proto), dp->hostlist_auto->filename);
+			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : adding to %s", hostname, dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto), dp->hostlist_auto->filename);
 			if (!HostlistPoolAddStr(&dp->hostlist_auto->hostlist, hostname, 0))
 			{
 				DLOG_ERR("StrPoolAddStr out of memory\n");
@@ -312,7 +312,7 @@ static void auto_hostlist_failed(struct desync_profile *dp, const char *hostname
 		else
 		{
 			DLOG("auto hostlist (profile %u) : NOT adding %s\n", dp->n, hostname);
-			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : NOT adding, duplicate detected", hostname, dp->n, client_ip_port, l7proto_str(l7proto));
+			HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : NOT adding, duplicate detected", hostname, dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto));
 		}
 	}
 }
@@ -328,7 +328,7 @@ static void process_retrans_fail(t_ctrack *ctrack, uint8_t proto, const struct s
 		*client_ip_port = 0;
 	if (ctrack && ctrack->dp && ctrack->hostname && auto_hostlist_retrans(ctrack, proto, ctrack->dp->hostlist_auto_retrans_threshold, client_ip_port, ctrack->l7proto))
 	{
-		HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : retrans threshold reached", ctrack->hostname, ctrack->dp->n, client_ip_port, l7proto_str(ctrack->l7proto));
+		HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : retrans threshold reached", ctrack->hostname, ctrack->dp->n, PROFILE_NAME(ctrack->dp), client_ip_port, l7proto_str(ctrack->l7proto));
 		auto_hostlist_failed(ctrack->dp, ctrack->hostname, ctrack->hostname_is_ip, client_ip_port, ctrack->l7proto);
 	}
 }
@@ -719,10 +719,11 @@ static uint8_t desync(
 		else
 		{
 			// create arg table that persists across multiple desync function calls
-			lua_createtable(params.L, 0, 12 + !!ctrack + !!dis->tcp + 3*!!replay_piece_count);
+			lua_createtable(params.L, 0, 12 + !!dp->name + !!ctrack + !!dis->tcp + 3*!!replay_piece_count);
 			lua_pushf_dissect(dis);
 			lua_pushf_ctrack(ctrack);
 			lua_pushf_int("profile_n", dp->n);
+			if (dp->name) lua_pushf_str("profile_name", dp->name);
 			lua_pushf_bool("outgoing", !bIncoming);
 			lua_pushf_str("ifin", (ifin && *ifin) ? ifin : NULL);
 			lua_pushf_str("ifout", (ifout && *ifout) ? ifout : NULL);
@@ -943,7 +944,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 		l7proto = ctrack_replay->l7proto;
 		dp = ctrack_replay->dp;
 		if (dp)
-			DLOG("using cached desync profile %u\n", dp->n);
+			DLOG("using cached desync profile %u (%s)\n", dp->n, PROFILE_NAME(dp));
 		else if (!ctrack_replay->dp_search_complete)
 		{
 			dp = ctrack_replay->dp = dp_find(&params.desync_profiles, IPPROTO_TCP, sdip4, sdip6, sdport, ctrack_replay->hostname, ctrack_replay->hostname_is_ip, l7proto, ssid, NULL, NULL, NULL);
@@ -979,7 +980,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 #endif
 		if (ctrack) l7proto = ctrack->l7proto;
 		if (dp)
-			DLOG("using cached desync profile %u\n", dp->n);
+			DLOG("using cached desync profile %u (%s)\n", dp->n, PROFILE_NAME(dp));
 		else if (!ctrack || !ctrack->dp_search_complete)
 		{
 			const char *hostname = NULL;
@@ -1073,7 +1074,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 			if (dis->tcp->th_flags & TH_RST)
 			{
 				DLOG("incoming RST detected for hostname %s\n", ctrack->hostname);
-				HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : incoming RST", ctrack->hostname, ctrack->dp->n, client_ip_port, l7proto_str(l7proto));
+				HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : incoming RST", ctrack->hostname, ctrack->dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto));
 				bFail = true;
 			}
 			else if (dis->len_payload && l7proto == L7_HTTP)
@@ -1085,7 +1086,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 					if (bFail)
 					{
 						DLOG("redirect to another domain detected. possibly DPI redirect.\n");
-						HOSTLIST_DEBUGLOG_APPEND("%s : profile %u : client %s : proto %s : redirect to another domain", ctrack->hostname, ctrack->dp->n, client_ip_port, l7proto_str(l7proto));
+						HOSTLIST_DEBUGLOG_APPEND("%s : profile %u (%s) : client %s : proto %s : redirect to another domain", ctrack->hostname, ctrack->dp->n, PROFILE_NAME(dp), client_ip_port, l7proto_str(l7proto));
 					}
 					else
 						DLOG("local or in-domain redirect detected. it's not a DPI redirect.\n");
@@ -1416,7 +1417,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 		l7proto = ctrack_replay->l7proto;
 		dp = ctrack_replay->dp;
 		if (dp)
-			DLOG("using cached desync profile %u\n", dp->n);
+			DLOG("using cached desync profile %u (%s)\n", dp->n, PROFILE_NAME(dp));
 		else if (!ctrack_replay->dp_search_complete)
 		{
 			dp = ctrack_replay->dp = dp_find(&params.desync_profiles, IPPROTO_UDP, sdip4, sdip6, sdport, ctrack_replay->hostname, ctrack_replay->hostname_is_ip, l7proto, ssid, NULL, NULL, NULL);
@@ -1452,7 +1453,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 #endif
 		if (ctrack) l7proto = ctrack->l7proto;
 		if (dp)
-			DLOG("using cached desync profile %u\n", dp->n);
+			DLOG("using cached desync profile %u (%s)\n", dp->n, PROFILE_NAME(dp));
 		else if (!ctrack || !ctrack->dp_search_complete)
 		{
 			const char *hostname = NULL;
