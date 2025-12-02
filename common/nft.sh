@@ -328,16 +328,16 @@ nft_apply_flow_offloading()
 
 		[ "$DISABLE_IPV4" = "1" ] || {
 			# allow only outgoing packets to initiate flow offload
-			nft_add_rule forward_hook oifname @wanif meta l4proto "{ tcp, udp }" jump flow_offload
-			nft_add_rule flow_offload ip daddr == @nozapret jump flow_offload_always
+			nft_add_rule forward_hook meta l4proto "{ tcp, udp }" oifname @wanif jump flow_offload
+			nft_add_rule flow_offload ip daddr == @nozapret goto flow_offload_always
 		}
 		[ "$DISABLE_IPV6" = "1" ] || {
-			nft_add_rule forward_hook oifname @wanif6 meta l4proto "{ tcp, udp }" jump flow_offload
-			nft_add_rule flow_offload ip6 daddr == @nozapret6 jump flow_offload_always
+			nft_add_rule forward_hook meta l4proto "{ tcp, udp }" oifname @wanif6 jump flow_offload
+			nft_add_rule flow_offload ip6 daddr == @nozapret6 goto flow_offload_always
 		}
 		nft_add_rule flow_offload jump flow_offload_zapret
 
-		nft_add_rule flow_offload_zapret jump flow_offload_always
+		nft_add_rule flow_offload_zapret goto flow_offload_always
 	}
 }
 
