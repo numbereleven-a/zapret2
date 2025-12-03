@@ -35,14 +35,55 @@ function pktdebug(ctx, desync)
 	DLOG("desync:")
 	var_debug(desync)
 end
+-- basic desync function
+-- prints function args
+function argdebug(ctx,desync)
+	var_debug(desync.arg)
+end
 
+-- basic desync function
+-- prints conntrack positions to DLOG
+function posdebug(ctx,desync)
+	local s="posdebug:"
+	for i,pos in pairs({'n','d','b','s'}) do
+		s=s.." "..pos..pos_get(desync,pos)
+	end
+	s=s.." payload "..#desync.dis.payload
+	if desync.reasm_data then
+		s=s.." reasm "..#desync.reasm_data
+	end
+	if desync.decrypt_data then
+		s=s.." decrypt "..#desync.decrypt_data
+	end
+	if desync.replay_piece_count then
+		s=s.." replay "..desync.replay_piece.."/"..desync.replay_piece_count
+	end
+	DLOG(s)
+end
 
+-- applies # and $ prefixes. #var means var length, %var means var value
+function apply_arg_prefix(arg)
+	for a,v in pairs(arg) do
+		local c = string.sub(v,1,1)
+		if v=='#' then
+			arg[a] = #_G[string.sub(v,2)]
+		elseif v=='%' then
+			arg[a] = _G[string.sub(v,2)]
+		elseif v=='\\' then
+			c = string.sub(v,2,2);
+			if c=='#' or c=='%' then
+				arg[a] = string.sub(v,2)
+			end
+		end
+	end
+end
 -- copy instance identification and args from execution plan to desync table
 function apply_execution_plan(desync, plan)
 	desync.func = plan.func
 	desync.func_n = plan.func_n
 	desync.func_instance = plan.func_instance
-	desync.arg = plan.arg
+	desync.arg = deepcopy(plan.arg)
+	apply_arg_prefix(desync.arg)
 end
 -- redo what whould be done without orchestration
 function replay_execution_plan(desync, plan)
