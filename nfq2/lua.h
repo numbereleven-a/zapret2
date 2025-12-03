@@ -71,7 +71,7 @@ void lua_pushf_iphdr(const struct ip *ip, size_t len);
 void lua_pushf_ip6hdr(const struct ip6_hdr *ip6, size_t len);
 void lua_push_dissect(const struct dissect *dis);
 void lua_pushf_dissect(const struct dissect *dis);
-void lua_pushf_ctrack(const t_ctrack *ctrack);
+void lua_pushf_ctrack(const t_ctrack *ctrack, const t_ctrack_position *pos);
 void lua_pushf_args(const struct ptr_list_head *args, int idx_desync);
 void lua_pushf_pos(const char *name, const struct packet_pos *pos);
 void lua_pushf_range(const char *name, const struct packet_range *range);

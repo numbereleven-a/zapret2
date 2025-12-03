@@ -102,8 +102,8 @@ static void ConntrackInitTrack(t_ctrack *t)
 {
 	memset(t, 0, sizeof(*t));
 	t->l7proto = L7_UNKNOWN;
-	t->scale_orig = t->scale_reply = SCALE_NONE;
-	time(&t->t_start);
+	t->pos.scale_orig = t->pos.scale_reply = SCALE_NONE;
+	time(&t->pos.t_start);
 	rawpacket_queue_init(&t->delayed);
 	lua_newtable(params.L);
 	t->lua_state = luaL_ref(params.L, LUA_REGISTRYINDEX);
@@ -136,86 +136,86 @@ static void ConntrackFeedPacket(t_ctrack *t, bool bReverse, const struct tcphdr 
 
 	if (bReverse)
 	{
-		t->pcounter_reply++;
-		t->pdcounter_reply += !!len_payload;
-		t->pbcounter_reply += len_payload;
+		t->pos.pcounter_reply++;
+		t->pos.pdcounter_reply += !!len_payload;
+		t->pos.pbcounter_reply += len_payload;
 	}
 
 	else
 	{
-		t->pcounter_orig++;
-		t->pdcounter_orig += !!len_payload;
-		t->pbcounter_orig += len_payload;
+		t->pos.pcounter_orig++;
+		t->pos.pdcounter_orig += !!len_payload;
+		t->pos.pbcounter_orig += len_payload;
 	}
 
 	if (tcphdr)
 	{
 		if (tcp_syn_segment(tcphdr))
 		{
-			if (t->state != SYN) ConntrackReInitTrack(t); // erase current entry
-			t->seq0 = ntohl(tcphdr->th_seq);
+			if (t->pos.state != SYN) ConntrackReInitTrack(t); // erase current entry
+			t->pos.seq0 = ntohl(tcphdr->th_seq);
 		}
 		else if (tcp_synack_segment(tcphdr))
 		{
 			// ignore SA dups
 			uint32_t seq0 = ntohl(tcphdr->th_ack) - 1;
-			if (t->state != SYN && t->seq0 != seq0)
+			if (t->pos.state != SYN && t->pos.seq0 != seq0)
 				ConntrackReInitTrack(t); // erase current entry
-			if (!t->seq0) t->seq0 = seq0;
-			t->ack0 = ntohl(tcphdr->th_seq);
+			if (!t->pos.seq0) t->pos.seq0 = seq0;
+			t->pos.ack0 = ntohl(tcphdr->th_seq);
 		}
 		else if (tcphdr->th_flags & (TH_FIN | TH_RST))
 		{
-			t->state = FIN;
+			t->pos.state = FIN;
 		}
 		else
 		{
-			if (t->state == SYN)
+			if (t->pos.state == SYN)
 			{
-				t->state = ESTABLISHED;
-				if (!bReverse && !t->ack0) t->ack0 = ntohl(tcphdr->th_ack) - 1;
+				t->pos.state = ESTABLISHED;
+				if (!bReverse && !t->pos.ack0) t->pos.ack0 = ntohl(tcphdr->th_ack) - 1;
 			}
 		}
 		scale = tcp_find_scale_factor(tcphdr);
 		mss = ntohs(tcp_find_mss(tcphdr));
 		if (bReverse)
 		{
-			t->pos_orig = t->seq_last = ntohl(tcphdr->th_ack);
-			t->ack_last = ntohl(tcphdr->th_seq);
-			t->pos_reply = t->ack_last + len_payload;
-			t->winsize_reply = ntohs(tcphdr->th_win);
-			t->winsize_reply_calc = t->winsize_reply;
-			if (t->scale_reply != SCALE_NONE) t->winsize_reply_calc <<= t->scale_reply;
-			if (mss && !t->mss_reply) t->mss_reply = mss;
-			if (scale != SCALE_NONE) t->scale_reply = scale;
+			t->pos.pos_orig = t->pos.seq_last = ntohl(tcphdr->th_ack);
+			t->pos.ack_last = ntohl(tcphdr->th_seq);
+			t->pos.pos_reply = t->pos.ack_last + len_payload;
+			t->pos.winsize_reply = ntohs(tcphdr->th_win);
+			t->pos.winsize_reply_calc = t->pos.winsize_reply;
+			if (t->pos.scale_reply != SCALE_NONE) t->pos.winsize_reply_calc <<= t->pos.scale_reply;
+			if (mss && !t->pos.mss_reply) t->pos.mss_reply = mss;
+			if (scale != SCALE_NONE) t->pos.scale_reply = scale;
 		}
 		else
 		{
-			t->seq_last = ntohl(tcphdr->th_seq);
-			t->pos_orig = t->seq_last + len_payload;
-			t->pos_reply = t->ack_last = ntohl(tcphdr->th_ack);
-			t->winsize_orig = ntohs(tcphdr->th_win);
-			t->winsize_orig_calc = t->winsize_orig;
-			if (t->scale_orig != SCALE_NONE) t->winsize_orig_calc <<= t->scale_orig;
-			if (mss && !t->mss_reply) t->mss_orig = mss;
-			if (scale != SCALE_NONE) t->scale_orig = scale;
+			t->pos.seq_last = ntohl(tcphdr->th_seq);
+			t->pos.pos_orig = t->pos.seq_last + len_payload;
+			t->pos.pos_reply = t->pos.ack_last = ntohl(tcphdr->th_ack);
+			t->pos.winsize_orig = ntohs(tcphdr->th_win);
+			t->pos.winsize_orig_calc = t->pos.winsize_orig;
+			if (t->pos.scale_orig != SCALE_NONE) t->pos.winsize_orig_calc <<= t->pos.scale_orig;
+			if (mss && !t->pos.mss_reply) t->pos.mss_orig = mss;
+			if (scale != SCALE_NONE) t->pos.scale_orig = scale;
 		}
 	}
 	else
 	{
 		if (bReverse)
 		{
-			t->ack_last = t->pos_reply;
-			t->pos_reply += len_payload;
+			t->pos.ack_last = t->pos.pos_reply;
+			t->pos.pos_reply += len_payload;
 		}
 		else
 		{
-			t->seq_last = t->pos_orig;
-			t->pos_orig += len_payload;
+			t->pos.seq_last = t->pos.pos_orig;
+			t->pos.pos_orig += len_payload;
 		}
 	}
 
-	time(&t->t_last);
+	time(&t->pos.t_last);
 }
 
 static bool ConntrackPoolDoubleSearchPool(t_conntrack_pool **pp, const struct ip *ip, const struct ip6_hdr *ip6, const struct tcphdr *tcphdr, const struct udphdr *udphdr, t_ctrack **ctrack, bool *bReverse)
@@ -317,12 +317,12 @@ void ConntrackPoolPurge(t_conntrack *p)
 	if ((tnow - p->t_last_purge) >= p->t_purge_interval)
 	{
 		HASH_ITER(hh, p->pool, t, tmp) {
-			tidle = tnow - t->track.t_last;
+			tidle = tnow - t->track.pos.t_last;
 			if (t->track.b_cutoff ||
 				(t->conn.l4proto == IPPROTO_TCP && (
-				(t->track.state == SYN && tidle >= p->timeout_syn) ||
-					(t->track.state == ESTABLISHED && tidle >= p->timeout_established) ||
-					(t->track.state == FIN && tidle >= p->timeout_fin))
+				(t->track.pos.state == SYN && tidle >= p->timeout_syn) ||
+					(t->track.pos.state == ESTABLISHED && tidle >= p->timeout_established) ||
+					(t->track.pos.state == FIN && tidle >= p->timeout_fin))
 					) || (t->conn.l4proto == IPPROTO_UDP && tidle >= p->timeout_udp)
 				)
 			{
@@ -349,21 +349,21 @@ void ConntrackPoolDump(const t_conntrack *p)
 		printf("%s [%s]:%u => [%s]:%u : %s : t0=%llu last=t0+%llu now=last+%llu orig=d%llu/n%llu/b%llu reply=d%llu/n%llu/b%lld ",
 			proto_name(t->conn.l4proto),
 			sa1, t->conn.sport, sa2, t->conn.dport,
-			t->conn.l4proto == IPPROTO_TCP ? connstate_s[t->track.state] : "-",
-			(unsigned long long)t->track.t_start, (unsigned long long)(t->track.t_last - t->track.t_start), (unsigned long long)(tnow - t->track.t_last),
-			(unsigned long long)t->track.pdcounter_orig, (unsigned long long)t->track.pcounter_orig, (unsigned long long)t->track.pbcounter_orig,
-			(unsigned long long)t->track.pdcounter_reply, (unsigned long long)t->track.pcounter_reply, (unsigned long long)t->track.pbcounter_reply);
+			t->conn.l4proto == IPPROTO_TCP ? connstate_s[t->track.pos.state] : "-",
+			(unsigned long long)t->track.pos.t_start, (unsigned long long)(t->track.pos.t_last - t->track.pos.t_start), (unsigned long long)(tnow - t->track.pos.t_last),
+			(unsigned long long)t->track.pos.pdcounter_orig, (unsigned long long)t->track.pos.pcounter_orig, (unsigned long long)t->track.pos.pbcounter_orig,
+			(unsigned long long)t->track.pos.pdcounter_reply, (unsigned long long)t->track.pos.pcounter_reply, (unsigned long long)t->track.pos.pbcounter_reply);
 		if (t->conn.l4proto == IPPROTO_TCP)
 			printf("seq0=%u rseq=%u pos_orig=%u ack0=%u rack=%u pos_reply=%u mss_orig=%u mss_reply=%u wsize_orig=%u:%d wsize_reply=%u:%d",
-				t->track.seq0, t->track.seq_last - t->track.seq0, t->track.pos_orig - t->track.seq0,
-				t->track.ack0, t->track.ack_last - t->track.ack0, t->track.pos_reply - t->track.ack0,
-				t->track.mss_orig, t->track.mss_reply,
-				t->track.winsize_orig, t->track.scale_orig == SCALE_NONE ? -1 : t->track.scale_orig,
-				t->track.winsize_reply, t->track.scale_reply == SCALE_NONE ? -1 : t->track.scale_reply);
+				t->track.pos.seq0, t->track.pos.seq_last - t->track.pos.seq0, t->track.pos.pos_orig - t->track.pos.seq0,
+				t->track.pos.ack0, t->track.pos.ack_last - t->track.pos.ack0, t->track.pos.pos_reply - t->track.pos.ack0,
+				t->track.pos.mss_orig, t->track.pos.mss_reply,
+				t->track.pos.winsize_orig, t->track.pos.scale_orig == SCALE_NONE ? -1 : t->track.pos.scale_orig,
+				t->track.pos.winsize_reply, t->track.pos.scale_reply == SCALE_NONE ? -1 : t->track.pos.scale_reply);
 		else
 			printf("rseq=%u pos_orig=%u rack=%u pos_reply=%u",
-				t->track.seq_last, t->track.pos_orig,
-				t->track.ack_last, t->track.pos_reply);
+				t->track.pos.seq_last, t->track.pos.pos_orig,
+				t->track.pos.ack_last, t->track.pos.pos_reply);
 		printf(" req_retrans=%u cutoff=%u lua_in_cutoff=%u lua_out_cutoff=%u hostname=%s l7proto=%s\n",
 			t->track.req_retrans_counter, t->track.b_cutoff, t->track.b_lua_in_cutoff, t->track.b_lua_out_cutoff, t->track.hostname, l7proto_str(t->track.l7proto));
 	};

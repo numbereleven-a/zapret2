@@ -249,9 +249,9 @@ static bool auto_hostlist_retrans(t_ctrack *ctrack, uint8_t l4proto, int thresho
 		{
 			if (!ctrack->req_seq_finalized || ctrack->req_seq_abandoned)
 				return false;
-			if (!seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end))
+			if (!seq_within(ctrack->pos.seq_last, ctrack->req_seq_start, ctrack->req_seq_end))
 			{
-				DLOG("req retrans : tcp seq %u not within the req range %u-%u. stop tracking.\n", ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end);
+				DLOG("req retrans : tcp seq %u not within the req range %u-%u. stop tracking.\n", ctrack->pos.seq_last, ctrack->req_seq_start, ctrack->req_seq_end);
 				ctrack_stop_retrans_counter(ctrack);
 				auto_hostlist_reset_fail_counter(ctrack->dp, ctrack->hostname, client_ip_port, l7proto);
 				return false;
@@ -344,14 +344,14 @@ static bool send_delayed(t_ctrack *ctrack)
 	return true;
 }
 
-static bool rawpacket_queue_csum_fix(struct rawpacket_tailhead *q, const struct dissect *dis, const struct sockaddr_storage* dst, uint32_t fwmark, uint32_t desync_fwmark, const char *ifin, const char *ifout)
+static bool rawpacket_queue_csum_fix(struct rawpacket_tailhead *q, const struct dissect *dis, const t_ctrack_position *pos, const struct sockaddr_storage* dst, uint32_t fwmark, uint32_t desync_fwmark, const char *ifin, const char *ifout)
 {
 	// this breaks const pointer to l4 header
 	if (dis->tcp)
 		verdict_tcp_csum_fix(VERDICT_PASS, (struct tcphdr *)dis->tcp, dis->transport_len, dis->ip, dis->ip6);
 	else if (dis->udp)
 		verdict_udp_csum_fix(VERDICT_PASS, (struct udphdr *)dis->udp, dis->transport_len, dis->ip, dis->ip6);
-	return rawpacket_queue(q, dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload);
+	return rawpacket_queue(q, dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, pos);
 }
 
 
@@ -360,7 +360,7 @@ static bool reasm_start(t_ctrack *ctrack, t_reassemble *reasm, uint8_t proto, si
 	ReasmClear(reasm);
 	if (sz <= szMax)
 	{
-		uint32_t seq = (proto == IPPROTO_TCP) ? ctrack->seq_last : 0;
+		uint32_t seq = (proto == IPPROTO_TCP) ? ctrack->pos.seq_last : 0;
 		if (ReasmInit(reasm, sz, seq))
 		{
 			ReasmFeed(reasm, seq, data_payload, len_payload);
@@ -382,7 +382,7 @@ static bool reasm_feed(t_ctrack *ctrack, t_reassemble *reasm, uint8_t proto, con
 {
 	if (ctrack && !ReasmIsEmpty(reasm))
 	{
-		uint32_t seq = (proto == IPPROTO_TCP) ? ctrack->seq_last : (uint32_t)reasm->size_present;
+		uint32_t seq = (proto == IPPROTO_TCP) ? ctrack->pos.seq_last : (uint32_t)reasm->size_present;
 		if (ReasmFeed(reasm, seq, data_payload, len_payload))
 		{
 			DLOG("reassemble : feeding data payload size=%zu. now we have %zu/%zu\n", len_payload, reasm->size_present, reasm->size);
@@ -429,7 +429,7 @@ static uint8_t ct_new_postnat_fix(const t_ctrack *ctrack, const struct dissect *
 	// if used in postnat chain, dropping initial packet will cause conntrack connection teardown
 	// so we need to workaround this.
 	// SYN and SYN,ACK checks are for conntrack-less mode
-	if (ctrack && (params.server ? ctrack->pcounter_reply : ctrack->pcounter_orig) == 1 || dis->tcp && (tcp_syn_segment(dis->tcp) || tcp_synack_segment(dis->tcp)))
+	if (ctrack && (params.server ? ctrack->pos.pcounter_reply : ctrack->pos.pcounter_orig) == 1 || dis->tcp && (tcp_syn_segment(dis->tcp) || tcp_synack_segment(dis->tcp)))
 	{
 		if (dis->len_pkt > *len_mod_pkt)
 			DLOG_ERR("linux postnat conntrack workaround cannot be applied\n");
@@ -458,60 +458,60 @@ static uint8_t ct_new_postnat_fix(const t_ctrack *ctrack, const struct dissect *
 }
 
 
-static uint64_t pos_get(const t_ctrack *ctrack, char mode, bool bReply)
+static uint64_t pos_get(const t_ctrack_position *pos, char mode, bool bReply)
 {
-	if (ctrack)
+	if (pos)
 	{
 		switch (mode)
 		{
-		case 'n': return bReply ? ctrack->pcounter_reply : ctrack->pcounter_orig;
-		case 'd': return bReply ? ctrack->pdcounter_reply : ctrack->pdcounter_orig;
-		case 's': return bReply ? (ctrack->ack_last - ctrack->ack0) : (ctrack->seq_last - ctrack->seq0);
-		case 'b': return bReply ? ctrack->pbcounter_reply : ctrack->pbcounter_orig;
+		case 'n': return bReply ? pos->pcounter_reply : pos->pcounter_orig;
+		case 'd': return bReply ? pos->pdcounter_reply : pos->pdcounter_orig;
+		case 's': return bReply ? (pos->ack_last - pos->ack0) : (pos->seq_last - pos->seq0);
+		case 'b': return bReply ? pos->pbcounter_reply : pos->pbcounter_orig;
 		}
 	}
 	return 0;
 }
-static bool check_pos_from(const t_ctrack *ctrack, bool bReply, const struct packet_range *range)
+static bool check_pos_from(const t_ctrack_position *pos, bool bReply, const struct packet_range *range)
 {
-	uint64_t pos;
+	uint64_t ps;
 	if (range->from.mode == 'x') return false;
 	if (range->from.mode != 'a')
 	{
-		if (ctrack)
+		if (pos)
 		{
-			pos = pos_get(ctrack, range->from.mode, bReply);
-			return pos >= range->from.pos;
+			ps = pos_get(pos, range->from.mode, bReply);
+			return ps >= range->from.pos;
 		}
 		else
 			return false;
 	}
 	return true;
 }
-static bool check_pos_to(const t_ctrack *ctrack, bool bReply, const struct packet_range *range)
+static bool check_pos_to(const t_ctrack_position *pos, bool bReply, const struct packet_range *range)
 {
-	uint64_t pos;
+	uint64_t ps;
 	if (range->to.mode == 'x') return false;
 	if (range->to.mode != 'a')
 	{
-		if (ctrack)
+		if (pos)
 		{
-			pos = pos_get(ctrack, range->to.mode, bReply);
-			return (pos < range->to.pos) || !range->upper_cutoff && (pos == range->to.pos);
+			ps = pos_get(pos, range->to.mode, bReply);
+			return (ps < range->to.pos) || !range->upper_cutoff && (ps == range->to.pos);
 		}
 		else
 			return false;
 	}
 	return true;
 }
-static bool check_pos_cutoff(const t_ctrack *ctrack, bool bReply, const struct packet_range *range)
+static bool check_pos_cutoff(const t_ctrack_position *pos, bool bReply, const struct packet_range *range)
 {
-	bool bto = check_pos_to(ctrack, bReply, range);
-	return ctrack ? !bto : (!bto || !check_pos_from(ctrack, bReply, range));
+	bool bto = check_pos_to(pos, bReply, range);
+	return pos ? !bto : (!bto || !check_pos_from(pos, bReply, range));
 }
-static bool check_pos_range(const t_ctrack *ctrack, bool bReply, const struct packet_range *range)
+static bool check_pos_range(const t_ctrack_position *pos, bool bReply, const struct packet_range *range)
 {
-	return check_pos_from(ctrack, bReply, range) && check_pos_to(ctrack, bReply, range);
+	return check_pos_from(pos, bReply, range) && check_pos_to(pos, bReply, range);
 }
 
 
@@ -645,6 +645,7 @@ static uint8_t desync(
 	const char *ifout,
 	bool bIncoming,
 	t_ctrack *ctrack,
+	const t_ctrack_position *pos,
 	t_l7payload l7payload,
 	const struct dissect *dis,
 	uint8_t *mod_pkt, size_t *len_mod_pkt,
@@ -674,6 +675,7 @@ static uint8_t desync(
 			DLOG("lua out cutoff\n");
 			return verdict;
 		}
+		if (!pos) pos = &ctrack->pos;
 	}
 	if (LIST_FIRST(&dp->lua_desync))
 	{
@@ -693,12 +695,12 @@ static uint8_t desync(
 			{
 				if (lua_instance_cutoff_check(&ctx, bIncoming))
 					DLOG("* lua '%s' : voluntary cutoff\n", instance);
-	   			else if (check_pos_cutoff(ctrack, bIncoming, range))
+				else if (check_pos_cutoff(pos, bIncoming, range))
 				{
 					DLOG("* lua '%s' : %s pos %c%llu %c%llu is beyond range %c%u%c%c%u (ctrack %s)\n",
 						instance, sDirection,
-						range->from.mode, pos_get(ctrack, range->from.mode, bIncoming),
-						range->to.mode, pos_get(ctrack, range->to.mode, bIncoming),
+						range->from.mode, pos_get(pos, range->from.mode, bIncoming),
+						range->to.mode, pos_get(pos, range->to.mode, bIncoming),
 						range->from.mode, range->from.pos,
 						range->upper_cutoff ? '<' : '-',
 						range->to.mode, range->to.pos,
@@ -721,7 +723,7 @@ static uint8_t desync(
 			// create arg table that persists across multiple desync function calls
 			lua_createtable(params.L, 0, 12 + !!dp->name + !!ctrack + !!dis->tcp + 3*!!replay_piece_count);
 			lua_pushf_dissect(dis);
-			lua_pushf_ctrack(ctrack);
+			lua_pushf_ctrack(ctrack, pos);
 			lua_pushf_int("profile_n", dp->n);
 			if (dp->name) lua_pushf_str("profile_name", dp->name);
 			lua_pushf_bool("outgoing", !bIncoming);
@@ -743,8 +745,8 @@ static uint8_t desync(
 			if (dis->tcp)
 			{
 				// recommended mss value for generated packets
-				if (ctrack && ctrack->mss_orig)
-					lua_pushf_int("tcp_mss", ctrack->mss_orig);
+				if (pos && pos->mss_orig)
+					lua_pushf_int("tcp_mss", pos->mss_orig);
 				else
 					lua_pushf_global("tcp_mss", "DEFAULT_MSS");
 			}
@@ -760,12 +762,12 @@ static uint8_t desync(
 				if (!lua_instance_cutoff_check(&ctx, bIncoming))
 				{
 					range = bIncoming ? &func->range_in : &func->range_out;
-					if (check_pos_range(ctrack, bIncoming, range))
+					if (check_pos_range(pos, bIncoming, range))
 					{
 						DLOG("* lua '%s' : %s pos %c%llu %c%llu in range %c%u%c%c%u\n",
 							instance, sDirection,
-							range->from.mode, pos_get(ctrack, range->from.mode, bIncoming),
-							range->to.mode, pos_get(ctrack, range->to.mode, bIncoming),
+							range->from.mode, pos_get(pos, range->from.mode, bIncoming),
+							range->to.mode, pos_get(pos, range->to.mode, bIncoming),
 							range->from.mode, range->from.pos,
 							range->upper_cutoff ? '<' : '-',
 							range->to.mode, range->to.pos);
@@ -810,8 +812,8 @@ static uint8_t desync(
 					else
 						DLOG("* lua '%s' : %s pos %c%llu %c%llu out of range %c%u%c%c%u\n",
 							instance, sDirection,
-							range->from.mode, pos_get(ctrack, range->from.mode, bIncoming),
-							range->to.mode, pos_get(ctrack, range->to.mode, bIncoming),
+							range->from.mode, pos_get(pos, range->from.mode, bIncoming),
+							range->to.mode, pos_get(pos, range->to.mode, bIncoming),
 							range->from.mode, range->from.pos,
 							range->upper_cutoff ? '<' : '-',
 							range->to.mode, range->to.pos);
@@ -905,7 +907,13 @@ static void setup_direction(
 	}
 }
 
-static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset, uint32_t fwmark, const char *ifin, const char *ifout, const struct dissect *dis, uint8_t *mod_pkt, size_t *len_mod_pkt)
+static uint8_t dpi_desync_tcp_packet_play(
+	unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset,
+	uint32_t fwmark,
+	const char *ifin, const char *ifout,
+	const t_ctrack_position *pos,
+	const struct dissect *dis,
+	uint8_t *mod_pkt, size_t *len_mod_pkt)
 {
 	uint8_t verdict = VERDICT_PASS;
 
@@ -972,7 +980,6 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 		// in absence of conntrack guess direction by presence of interface names. won't work on BSD
 		bReverseFixed = ctrack ? (bReverse ^ params.server) : (bReverse = ifin && ifin && (!ifout || !*ifout));
 		setup_direction(dis, bReverseFixed, &src, &dst, &sdip4, &sdip6, &sdport);
-
 		ifname = bReverse ? ifin : ifout;
 #ifdef HAS_FILTER_SSID
 		ssid = wlan_ssid_search_ifname(ifname);
@@ -992,7 +999,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 				if (!hostname && !bReverse)
 				{
 					if (ipcache_get_hostname(sdip4, sdip6, host, sizeof(host), &hostname_is_ip) && *host)
-						if (!(hostname = ctrack_replay->hostname = strdup(host)))
+						if (!(hostname = ctrack->hostname = strdup(host)))
 							DLOG_ERR("strdup(host): out of memory\n");
 				}
 			}
@@ -1061,7 +1068,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 		// process reply packets for auto hostlist mode
 		// by looking at RSTs or HTTP replies we decide whether original request looks like DPI blocked
 		// we only process first-sequence replies. do not react to subsequent redirects or RSTs
-		if (!params.server && ctrack && ctrack->hostname && ctrack->hostname_ah_check && (ctrack->ack_last - ctrack->ack0) == 1)
+		if (!params.server && ctrack && ctrack->hostname && ctrack->hostname_ah_check && (ctrack->pos.ack_last - ctrack->pos.ack0) == 1)
 		{
 			bool bFail = false;
 
@@ -1151,8 +1158,8 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 				// we do not reassemble http
 				if (!ctrack->req_seq_present)
 				{
-					ctrack->req_seq_start = ctrack->seq_last;
-					ctrack->req_seq_end = ctrack->pos_orig - 1;
+					ctrack->req_seq_start = ctrack->pos.seq_last;
+					ctrack->req_seq_end = ctrack->pos.pos_orig - 1;
 					ctrack->req_seq_present = ctrack->req_seq_finalized = true;
 					DLOG("req retrans : tcp seq interval %u-%u\n", ctrack->req_seq_start, ctrack->req_seq_end);
 				}
@@ -1176,7 +1183,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 			{
 				// do not reasm retransmissions
 				if (!bReqFull && ReasmIsEmpty(&ctrack->reasm_orig) && !ctrack->req_seq_abandoned &&
-					!(ctrack->req_seq_finalized && seq_within(ctrack->seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
+					!(ctrack->req_seq_finalized && seq_within(ctrack->pos.seq_last, ctrack->req_seq_start, ctrack->req_seq_end)))
 				{
 					// do not reconstruct unexpected large payload (they are feeding garbage ?)
 					if (!reasm_orig_start(ctrack, IPPROTO_TCP, TLSRecordLen(dis->data_payload), TCP_MAX_REASM, dis->data_payload, dis->len_payload))
@@ -1187,19 +1194,19 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 					if (!ctrack->req_seq_present)
 					{
 						// lower bound of request seq interval
-						ctrack->req_seq_start = ctrack->seq_last;
+						ctrack->req_seq_start = ctrack->pos.seq_last;
 						ctrack->req_seq_present = true;
 					}
 					// upper bound of request seq interval
 					// it can grow on every packet until request is complete. then interval is finalized and never touched again.
-					ctrack->req_seq_end = ctrack->pos_orig - 1;
+					ctrack->req_seq_end = ctrack->pos.pos_orig - 1;
 					DLOG("req retrans : seq interval %u-%u\n", ctrack->req_seq_start, ctrack->req_seq_end);
 					ctrack->req_seq_finalized |= bReqFull;
 				}
 
 				if (!ReasmIsEmpty(&ctrack->reasm_orig))
 				{
-					if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &dst, fwmark, desync_fwmark, ifin, ifout))
+					if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &ctrack->pos, &dst, fwmark, desync_fwmark, ifin, ifout))
 					{
 						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
 					}
@@ -1217,7 +1224,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 				}
 			}
 		}
-		else if (ctrack && (ctrack->seq_last - ctrack->seq0)==1 && IsMTProto(dis->data_payload, dis->len_payload))
+		else if (ctrack && (ctrack->pos.seq_last - ctrack->pos.seq0)==1 && IsMTProto(dis->data_payload, dis->len_payload))
 		{
 			DLOG("packet contains telegram mtproto2 initial\n");
 			// mtproto detection requires aes. react only on the first tcp data packet. do not detect if ctrack unavailable.
@@ -1238,7 +1245,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 		}
 		if (ctrack && ctrack->req_seq_finalized)
 		{
-			uint32_t dseq = ctrack->seq_last - ctrack->req_seq_end;
+			uint32_t dseq = ctrack->pos.seq_last - ctrack->req_seq_end;
 			// do not react to 32-bit overflowed sequence numbers. allow 16 Mb grace window then cutoff.
 			if (dseq >= 0x1000000 && !(dseq & 0x80000000)) ctrack->req_seq_abandoned = true;
 		}
@@ -1344,7 +1351,7 @@ static uint8_t dpi_desync_tcp_packet_play(unsigned int replay_piece, unsigned in
 		ntop46_port((struct sockaddr *)&dst, s2, sizeof(s2));
 		DLOG("dpi desync src=%s dst=%s track_direction=%s fixed_direction=%s connection_proto=%s payload_type=%s\n", s1, s2, bReverse ? "in" : "out", bReverseFixed ? "in" : "out", l7proto_str(l7proto), l7payload_str(l7payload));
 	}
-	verdict = desync(dp, fwmark, ifin, ifout, bReverseFixed, ctrack_replay, l7payload, dis, mod_pkt, len_mod_pkt, replay_piece, replay_piece_count, reasm_offset, rdata_payload, rlen_payload, NULL, 0);
+	verdict = desync(dp, fwmark, ifin, ifout, bReverseFixed, ctrack_replay, pos, l7payload, dis, mod_pkt, len_mod_pkt, replay_piece, replay_piece_count, reasm_offset, rdata_payload, rlen_payload, NULL, 0);
 
 pass:
 	return (!bReverseFixed && (verdict & VERDICT_MASK) == VERDICT_DROP) ? ct_new_postnat_fix(ctrack, dis, mod_pkt, len_mod_pkt) : verdict;
@@ -1361,7 +1368,13 @@ static void quic_reasm_cancel(t_ctrack *ctrack, const char *reason)
 }
 
 
-static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset, uint32_t fwmark, const char *ifin, const char *ifout, const struct dissect *dis, uint8_t *mod_pkt, size_t *len_mod_pkt)
+static uint8_t dpi_desync_udp_packet_play(
+	unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset,
+	uint32_t fwmark,
+	const char *ifin, const char *ifout,
+	const t_ctrack_position *pos,
+	const struct dissect *dis,
+	uint8_t *mod_pkt, size_t *len_mod_pkt)
 {
 	uint8_t verdict = VERDICT_PASS;
 
@@ -1465,7 +1478,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 				if (!hostname && !bReverse)
 				{
 					if (ipcache_get_hostname(sdip4, sdip6, host, sizeof(host), &hostname_is_ip) && *host)
-						if (!(hostname = ctrack_replay->hostname = strdup(host)))
+						if (!(hostname = ctrack->hostname = strdup(host)))
 							DLOG_ERR("strdup(host): out of memory\n");
 				}
 			}
@@ -1594,7 +1607,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 								}
 								if (!ReasmIsEmpty(&ctrack->reasm_orig))
 								{
-									if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &dst, fwmark, desync_fwmark, ifin, ifout))
+									if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &ctrack->pos, &dst, fwmark, desync_fwmark, ifin, ifout))
 									{
 										DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
 									}
@@ -1634,7 +1647,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 									if (!reasm_orig_start(ctrack, IPPROTO_UDP, UDP_MAX_REASM, UDP_MAX_REASM, clean, clean_len))
 										goto pass_reasm_cancel;
 								}
-								if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &dst, fwmark, desync_fwmark, ifin, ifout))
+								if (rawpacket_queue_csum_fix(&ctrack->delayed, dis, &ctrack->pos, &dst, fwmark, desync_fwmark, ifin, ifout))
 								{
 									DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ctrack->delayed));
 								}
@@ -1793,7 +1806,7 @@ static uint8_t dpi_desync_udp_packet_play(unsigned int replay_piece, unsigned in
 		ntop46_port((struct sockaddr *)&dst, s2, sizeof(s2));
 		DLOG("dpi desync src=%s dst=%s track_direction=%s fixed_direction=%s connection_proto=%s payload_type=%s\n", s1, s2, bReverse ? "in" : "out", bReverseFixed ? "in" : "out", l7proto_str(l7proto), l7payload_str(l7payload));
 	}
-	verdict = desync(dp, fwmark, ifin, ifout, bReverseFixed, ctrack_replay, l7payload, dis, mod_pkt, len_mod_pkt, replay_piece, replay_piece_count, reasm_offset, NULL, 0, data_decrypt, len_decrypt);
+	verdict = desync(dp, fwmark, ifin, ifout, bReverseFixed, ctrack_replay, pos, l7payload, dis, mod_pkt, len_mod_pkt, replay_piece, replay_piece_count, reasm_offset, NULL, 0, data_decrypt, len_decrypt);
 
 pass:
 	return (!bReverse && (verdict & VERDICT_MASK) == VERDICT_DROP) ? ct_new_postnat_fix(ctrack, dis, mod_pkt, len_mod_pkt) : verdict;
@@ -1842,6 +1855,7 @@ static void packet_debug(bool replay, const struct dissect *dis)
 
 static uint8_t dpi_desync_packet_play(
 	unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset, uint32_t fwmark, const char *ifin, const char *ifout,
+	const t_ctrack_position *pos,
 	const uint8_t *data_pkt, size_t len_pkt,
 	uint8_t *mod_pkt, size_t *len_mod_pkt)
 {
@@ -1857,7 +1871,7 @@ static uint8_t dpi_desync_packet_play(
 		case IPPROTO_TCP:
 			if (dis.tcp)
 			{
-				verdict = dpi_desync_tcp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
+				verdict = dpi_desync_tcp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, pos, &dis, mod_pkt, len_mod_pkt);
 				// we fix csum before pushing to replay queue
 				if (!replay_piece_count) verdict_tcp_csum_fix(verdict, (struct tcphdr *)dis.tcp, dis.transport_len, dis.ip, dis.ip6);
 			}
@@ -1865,7 +1879,7 @@ static uint8_t dpi_desync_packet_play(
 		case IPPROTO_UDP:
 			if (dis.udp)
 			{
-				verdict = dpi_desync_udp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
+				verdict = dpi_desync_udp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, pos, &dis, mod_pkt, len_mod_pkt);
 				// we fix csum before pushing to replay queue
 				if (!replay_piece_count) verdict_udp_csum_fix(verdict, (struct udphdr *)dis.udp, dis.transport_len, dis.ip, dis.ip6);
 			}
@@ -1877,7 +1891,7 @@ static uint8_t dpi_desync_packet_play(
 uint8_t dpi_desync_packet(uint32_t fwmark, const char *ifin, const char *ifout, const uint8_t *data_pkt, size_t len_pkt, uint8_t *mod_pkt, size_t *len_mod_pkt)
 {
 	ipcachePurgeRateLimited(&params.ipcache, params.ipcache_lifetime);
-	return dpi_desync_packet_play(0, 0, 0, fwmark, ifin, ifout, data_pkt, len_pkt, mod_pkt, len_mod_pkt);
+	return dpi_desync_packet_play(0, 0, 0, fwmark, ifin, ifout, NULL, data_pkt, len_pkt, mod_pkt, len_mod_pkt);
 }
 
 
@@ -1895,7 +1909,7 @@ static bool replay_queue(struct rawpacket_tailhead *q)
 	{
 		DLOG("REPLAYING delayed packet #%u offset %zu\n", i+1, offset);
 		modlen = sizeof(mod);
-		uint8_t verdict = dpi_desync_packet_play(i, count, offset, rp->fwmark_orig, rp->ifin, rp->ifout, rp->packet, rp->len, mod, &modlen);
+		uint8_t verdict = dpi_desync_packet_play(i, count, offset, rp->fwmark_orig, rp->ifin, rp->ifout, rp->pos_present ? &rp->pos : NULL, rp->packet, rp->len, mod, &modlen);
 		switch (verdict & VERDICT_MASK)
 		{
 		case VERDICT_MODIFY:

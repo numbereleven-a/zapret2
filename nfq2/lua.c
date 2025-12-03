@@ -1167,21 +1167,23 @@ void lua_pushf_dissect(const struct dissect *dis)
 	lua_rawset(params.L,-3);
 }
 
-void lua_pushf_ctrack(const t_ctrack *ctrack)
+void lua_pushf_ctrack(const t_ctrack *ctrack, const t_ctrack_position *pos)
 {
 	LUA_STACK_GUARD_ENTER(params.L)
+
+	if (!pos) pos = &ctrack->pos;
 
 	lua_pushliteral(params.L, "track");
 	if (ctrack)
 	{
 		lua_createtable(params.L, 0, 13 + (ctrack->ipproto == IPPROTO_TCP));
 
-		lua_pushf_int("pcounter_orig", ctrack->pcounter_orig);
-		lua_pushf_int("pdcounter_orig", ctrack->pdcounter_orig);
-		lua_pushf_int("pbcounter_orig", ctrack->pbcounter_orig);
-		lua_pushf_int("pcounter_reply", ctrack->pcounter_reply);
-		lua_pushf_int("pdcounter_reply", ctrack->pdcounter_reply);
-		lua_pushf_int("pbcounter_reply", ctrack->pbcounter_reply);
+		lua_pushf_int("pcounter_orig", pos->pcounter_orig);
+		lua_pushf_int("pdcounter_orig", pos->pdcounter_orig);
+		lua_pushf_int("pbcounter_orig", pos->pbcounter_orig);
+		lua_pushf_int("pcounter_reply", pos->pcounter_reply);
+		lua_pushf_int("pdcounter_reply", pos->pdcounter_reply);
+		lua_pushf_int("pbcounter_reply", pos->pbcounter_reply);
 		if (ctrack->incoming_ttl)
 			lua_pushf_int("incoming_ttl", ctrack->incoming_ttl);
 		else
@@ -1197,20 +1199,20 @@ void lua_pushf_ctrack(const t_ctrack *ctrack)
 		{
 			lua_pushliteral(params.L, "tcp");
 			lua_createtable(params.L, 0, 14);
-			lua_pushf_int("seq0", ctrack->seq0);
-			lua_pushf_int("seq", ctrack->seq_last);
-			lua_pushf_int("ack0", ctrack->ack0);
-			lua_pushf_int("ack", ctrack->ack_last);
-			lua_pushf_int("pos_orig", ctrack->pos_orig - ctrack->seq0);
-			lua_pushf_int("winsize_orig", ctrack->winsize_orig);
-			lua_pushf_int("winsize_orig_calc", ctrack->winsize_orig_calc);
-			lua_pushf_int("scale_orig", ctrack->scale_orig);
-			lua_pushf_int("mss_orig", ctrack->mss_orig);
-			lua_pushf_int("pos_reply", ctrack->pos_reply - ctrack->ack0);
-			lua_pushf_int("winsize_reply", ctrack->winsize_reply);
-			lua_pushf_int("winsize_reply_calc", ctrack->winsize_reply_calc);
-			lua_pushf_int("scale_reply", ctrack->scale_reply);
-			lua_pushf_int("mss_reply", ctrack->mss_reply);
+			lua_pushf_int("seq0", pos->seq0);
+			lua_pushf_int("seq", pos->seq_last);
+			lua_pushf_int("ack0", pos->ack0);
+			lua_pushf_int("ack", pos->ack_last);
+			lua_pushf_int("pos_orig", pos->pos_orig - pos->seq0);
+			lua_pushf_int("winsize_orig", pos->winsize_orig);
+			lua_pushf_int("winsize_orig_calc", pos->winsize_orig_calc);
+			lua_pushf_int("scale_orig", pos->scale_orig);
+			lua_pushf_int("mss_orig", pos->mss_orig);
+			lua_pushf_int("pos_reply", pos->pos_reply - pos->ack0);
+			lua_pushf_int("winsize_reply", pos->winsize_reply);
+			lua_pushf_int("winsize_reply_calc", pos->winsize_reply_calc);
+			lua_pushf_int("scale_reply", pos->scale_reply);
+			lua_pushf_int("mss_reply", pos->mss_reply);
 			lua_rawset(params.L,-3);
 		}
 	}
