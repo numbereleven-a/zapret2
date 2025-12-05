@@ -445,6 +445,17 @@ function http_dissect_req(http)
 	local uri = string.sub(req,pos,pnext-1)
 	return { method = method, uri = uri, headers = http_dissect_headers(http,hdrpos) }
 end
+function http_dissect_reply(http)
+	if not http then return nil; end
+	local s, pos, code
+	s = string.sub(http,1,8)
+	if s~="HTTP/1.1" and s~="HTTP/1.0" then return nil end
+	pos = string.find(http,"[ \t\r\n]",10)
+	code = tonumber(string.sub(http,10,pos-1))
+	if not code then return nil end
+	pos = find_next_line(http,pos)
+	return { code = code, headers = http_dissect_headers(http,pos) }
+end
 
 -- convert comma separated list of tcp flags to tcp.th_flags bit field
 function parse_tcp_flags(s)
