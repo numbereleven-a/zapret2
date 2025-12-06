@@ -458,7 +458,7 @@ function http_dissect_reply(http)
 end
 function dissect_url(url)
 	local p1,pb,pstart,pend
-	local proto, creds, domain, uri
+	local proto, creds, domain, port, uri
 	p1 = string.find(url,"[^ \t]")
 	if not p1 then return nil end
 	pb = p1
@@ -477,13 +477,24 @@ function dissect_url(url)
 		if pend==pb then
 			uri = string.sub(url,pb)
 		else
-			domain = string.sub(url,p1,pend-1)
 			uri = string.sub(url,pend)
+			domain = string.sub(url,p1,pend-1)
 		end
 	else
-		uri = string.sub(url,p1)
+		if proto then
+			domain = string.sub(url,p1)
+		else
+			uri = string.sub(url,p1)
+		end
 	end
-	return { proto = proto, creds = creds, domain = domain, uri=uri }
+	if domain then
+		pstart,pend = string.find(domain,':',1,true)
+		if pend then
+			port = string.sub(domain, pend+1)
+			domain = string.sub(domain, 1, pstart-1)
+		end
+	end
+	return { proto = proto, creds = creds, domain = domain, port = port, uri=uri }
 end
 function dissect_nld(domain, level)
 	if domain then
