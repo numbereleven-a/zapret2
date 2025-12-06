@@ -456,6 +456,53 @@ function http_dissect_reply(http)
 	pos = find_next_line(http,pos)
 	return { code = code, headers = http_dissect_headers(http,pos) }
 end
+function dissect_url(url)
+	local p1,pb,pstart,pend
+	local proto, creds, domain, uri
+	p1 = string.find(url,"[^ \t]")
+	if not p1 then return nil end
+	pb = p1
+	pstart,pend = string.find(url,"[a-z]+://",p1)
+	if pend then
+		proto = string.sub(url,pstart,pend-3)
+		p1 = pend+1
+	end
+	pstart,pend = string.find(url,"[@/]",p1)
+	if pend and string.sub(url,pstart,pend)=='@' then
+		creds = string.sub(url,p1,pend-1)
+		p1 = pend+1
+	end
+	pstart,pend = string.find(url,"/",p1,true)
+	if pend then
+		if pend==pb then
+			uri = string.sub(url,pb)
+		else
+			domain = string.sub(url,p1,pend-1)
+			uri = string.sub(url,pend)
+		end
+	else
+		uri = string.sub(url,p1)
+	end
+	return { proto = proto, creds = creds, domain = domain, uri=uri }
+end
+function dissect_nld(domain, level)
+	if domain then
+		local n=1
+		for pos=#domain,1,-1 do
+			if string.sub(domain,pos,pos)=='.' then
+				if n==level then
+					return string.sub(domain, pos+1)
+				end
+				n=n+1
+			end
+		end
+		if n==level then
+			return domain
+		end
+	end
+	return nil
+end
+
 
 -- convert comma separated list of tcp flags to tcp.th_flags bit field
 function parse_tcp_flags(s)
