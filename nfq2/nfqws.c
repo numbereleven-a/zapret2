@@ -1283,8 +1283,10 @@ static bool wf_make_filter(
 
 	if (bHaveTCP)
 	{
-		if (dp_list_have_autohostlist(&params.desync_profiles))
-			snprintf(wf + strlen(wf), len - strlen(wf), " or\n " DIVERT_HTTP_REDIRECT);
+//		may be required by orchestrators - always redirect
+//		if (dp_list_have_autohostlist(&params.desync_profiles))
+
+		snprintf(wf + strlen(wf), len - strlen(wf), " or\n " DIVERT_HTTP_REDIRECT);
 	}
 
 	if (!LIST_EMPTY(wf_raw_part))
