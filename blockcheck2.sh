@@ -1199,8 +1199,8 @@ test_runner()
 				[ -f "$script" ] || continue
 				unset -f $FUNC
 				. "$script"
-				echo
 				existf $FUNC && {
+					echo
 					echo "* script : $TEST/$(basename "$script")"
 					$FUNC "$@"
 				}
