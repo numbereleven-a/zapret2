@@ -1,3 +1,8 @@
+-- standard automation/orchestration code
+-- this is related to making dynamic strategy decisions without rewriting or altering strategy function code
+-- orchestrators can decide which instances to call or not to call or pass them dynamic arguments
+-- failure detectors test potential block conditions for orchestrators
+
 -- arg: reqhost - require hostname, do not work with ip
 function automate_host_record(desync)
 	local key
@@ -158,6 +163,7 @@ end
 -- arg: time=<sec> - if last failure happened earlier than `maxtime` seconds ago - reset failure counter. default is 60.
 -- arg: reqhost - pass with no tampering if hostname is unavailable
 -- arg: detector - failure detector function name.
+-- args for failure detector - see standard_failure_detector or your own detector
 -- test case: nfqws2 --qnum 200 --debug --lua-init=@zapret-lib.lua --lua-init=@zapret-auto.lua --in-range=-s1 --lua-desync=circular --lua-desync=argdebug:strategy=1 --lua-desync=argdebug:strategy=2
 function circular(ctx, desync)
 	local function count_strategies(hrec, plan)
