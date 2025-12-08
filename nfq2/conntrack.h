@@ -43,7 +43,7 @@ typedef struct
 // this structure helps to reassemble continuous packets streams. it does not support out-of-orders
 typedef struct {
 	uint8_t *packet;		// allocated for size during reassemble request. requestor must know the message size.
-	uint32_t seq;			// current seq number. if a packet comes with an unexpected seq - it fails reassemble session.
+	uint32_t seq;			// current seq number. if a packet comes with unsupported seq overlap - it fails reassemble session.
 	size_t size;			// expected message size. success means that we have received exactly 'size' bytes and have them in 'packet'
 	size_t size_present;		// how many bytes already stored in 'packet'
 } t_reassemble;

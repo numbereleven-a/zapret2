@@ -394,17 +394,25 @@ bool ReasmResize(t_reassemble *reasm, size_t new_size)
 	if (reasm->size_present > new_size) reasm->size_present = new_size;
 	return true;
 }
+#define REASM_MAX_NEG 0x100000
 bool ReasmFeed(t_reassemble *reasm, uint32_t seq, const void *payload, size_t len)
 {
+	uint32_t dseq = seq - reasm->seq;
+	if (dseq && (dseq < REASM_MAX_NEG))
+		return false; // fail session if a gap about to appear
 	uint32_t neg_overlap = reasm->seq - seq;
-	if ((seq > reasm->seq) || (neg_overlap > reasm->size_present))
-		return false; // fail session if a gap about to appear or negative overlap is beyond start position
+	if (neg_overlap > REASM_MAX_NEG)
+		return false; // too big minus
 
-	size_t szcopy;
+	size_t szcopy, szignore;
+	szignore = (neg_overlap > reasm->size_present) ? neg_overlap - reasm->size_present : 0;
 	szcopy = reasm->size - reasm->size_present;
 	if (len < szcopy) szcopy = len;
+	if (szignore>=szcopy) return true; // everyting is before the starting pos
+	szcopy-=szignore;
+	neg_overlap-=szignore;
 	// in case of seq overlap new data replaces old - unix behavior
-	memcpy(reasm->packet + reasm->size_present - neg_overlap, payload, szcopy);
+	memcpy(reasm->packet + reasm->size_present - neg_overlap, payload+szignore, szcopy);
 	if (szcopy>neg_overlap)
 	{
 		reasm->size_present += szcopy - neg_overlap;
