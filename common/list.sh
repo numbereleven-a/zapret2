@@ -25,7 +25,7 @@ filter_apply_hostlist_target()
 {
 	# $1 - var name of nfqws params
 
-	local v parm parm1 parm2 parm3 parm4 parm5 parm6 parm7 parm8 parm9 parmNA
+	local v parm parm1 parm2 parm3 parm4 parm5 parm6 parm7 parm8 parm9 parm10 parmNA
 	eval v="\$$1"
 	if contains "$v" "$HOSTLIST_MARKER" || contains "$v" "$HOSTLIST_NOAUTO_MARKER"; then
 		[ "$MODE_FILTER" = hostlist -o "$MODE_FILTER" = autohostlist ] &&
@@ -41,10 +41,11 @@ filter_apply_hostlist_target()
 				parm6="${AUTOHOSTLIST_FAIL_TIME:+--hostlist-auto-fail-time=$AUTOHOSTLIST_FAIL_TIME}"
 				parm7="${AUTOHOSTLIST_RETRANS_THRESHOLD:+--hostlist-auto-retrans-threshold=$AUTOHOSTLIST_RETRANS_THRESHOLD}"
 				parm8="${AUTOHOSTLIST_RETRANS_MAXSEQ:+--hostlist-auto-retrans-maxseq=$AUTOHOSTLIST_RETRANS_MAXSEQ}"
-				parm9="--hostlist=$HOSTLIST_AUTO"
+				parm9="${AUTOHOSTLIST_INCOMING_MAXSEQ:+--hostlist-auto-incoming-maxseq=$AUTOHOSTLIST_INCOMING_MAXSEQ}"
+				parm10="--hostlist=$HOSTLIST_AUTO"
 			}
-			parm="$parm1${parm2:+ $parm2}${parm3:+ $parm3}${parm4:+ $parm4}${parm5:+ $parm5}${parm6:+ $parm6}${parm7:+ $parm7}${parm8:+ $parm8}"
-			parmNA="$parm1${parm2:+ $parm2}${parm3:+ $parm3}${parm9:+ $parm9}"
+			parm="$parm1${parm2:+ $parm2}${parm3:+ $parm3}${parm4:+ $parm4}${parm5:+ $parm5}${parm6:+ $parm6}${parm7:+ $parm7}${parm8:+ $parm8}${parm9:+ $parm9}"
+			parmNA="$parm1${parm2:+ $parm2}${parm3:+ $parm3}${parm10:+ $parm10}"
 		}
 		v="$(replace_str $HOSTLIST_NOAUTO_MARKER "$parmNA" "$v")"
 		v="$(replace_str $HOSTLIST_MARKER "$parm" "$v")"
