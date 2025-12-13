@@ -732,6 +732,9 @@ Windows :
 nfqws2 создает каталог, назначает на него такие права, чтобы LUA код смог писать туда файлы, передает имя директории в переменной env `WRITEABLE`.
 Если dirname не задан, на Windows создается каталог внутри `%USERPROFILE%/AppData/LocalLow`
 
+Со стороны LUA убираются опасные функции - os.execute, io.popen,package.loadlib и модуль debug.
+На github исполняемые файлы nfqws2 собираются с вариантом luajit без FFI.
+
 ## Вызов LUA кода
 
 LUA код вызывается в 2 этапа.
