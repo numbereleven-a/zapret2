@@ -20,7 +20,6 @@ function standard_hostkey(desync)
 	elseif not desync.arg.reqhost then
 		hostkey = host_ip(desync)
 	end
-	-- prevent nld for ip addresses
 	return hostkey
 end
 
