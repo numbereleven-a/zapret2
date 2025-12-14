@@ -975,6 +975,23 @@ static void setup_direction(
 	}
 }
 
+static void dp_changed(t_ctrack *ctrack)
+{
+	if (ctrack)
+	{
+		if (ctrack->b_lua_in_cutoff)
+		{
+			DLOG("clearing lua in cutoff because of profile change\n");
+			ctrack->b_lua_in_cutoff = false;
+		}
+		if (ctrack->b_lua_out_cutoff)
+		{
+			DLOG("clearing lua out cutoff because of profile change\n");
+			ctrack->b_lua_out_cutoff = false;
+		}
+	}
+}
+
 static uint8_t dpi_desync_tcp_packet_play(
 	unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset,
 	uint32_t fwmark,
@@ -1342,6 +1359,7 @@ static uint8_t dpi_desync_tcp_packet_play(
 			if (!dp) goto pass_reasm_cancel;
 			if (dp != dp_prev)
 			{
+				dp_changed(ctrack_replay);
 				DLOG("desync profile changed by revealed l7 protocol or hostname !\n");
 			}
 		}
@@ -1786,6 +1804,7 @@ static uint8_t dpi_desync_udp_packet_play(
 					goto pass_reasm_cancel;
 				if (dp != dp_prev)
 				{
+					dp_changed(ctrack_replay);
 					DLOG("desync profile changed by revealed l7 protocol or hostname !\n");
 				}
 			}
