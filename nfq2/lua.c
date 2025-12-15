@@ -2138,7 +2138,7 @@ static int luacall_csum_ip4_fix(lua_State *L)
 }
 static int luacall_csum_tcp_fix(lua_State *L)
 {
-	// csum_ip4_fix(ip_header, tcp_header, payload) returns tcp_header
+	// csum_tcp_fix(ip_header, tcp_header, payload) returns tcp_header
 	lua_check_argc(L,"csum_tcp_fix",3);
 
 	LUA_STACK_GUARD_ENTER(L)
@@ -2179,7 +2179,7 @@ static int luacall_csum_tcp_fix(lua_State *L)
 }
 static int luacall_csum_udp_fix(lua_State *L)
 {
-	// csum_ip4_fix(ip_header, tcp_header, payload) returns tcp_header
+	// csum_udp_fix(ip_header, udp_header, payload) returns tcp_header
 	lua_check_argc(L,"csum_udp_fix",3);
 
 	LUA_STACK_GUARD_ENTER(L)
