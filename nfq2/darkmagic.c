@@ -718,6 +718,29 @@ bool prepare_low_appdata()
 	return b;
 }
 
+BOOL JobSandbox()
+{
+	BOOL bRes = FALSE;
+	HANDLE hJob;
+	JOBOBJECT_BASIC_LIMIT_INFORMATION basic_limit;
+	JOBOBJECT_BASIC_UI_RESTRICTIONS basic_ui;
+
+	if (hJob = CreateJobObjectW(NULL, NULL))
+	{
+		basic_limit.LimitFlags = JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+		// prevent child process creation
+		basic_limit.ActiveProcessLimit = 1;
+		// prevent some UI interaction and settings change
+		basic_ui.UIRestrictionsClass = JOB_OBJECT_UILIMIT_DESKTOP | JOB_OBJECT_UILIMIT_DISPLAYSETTINGS | JOB_OBJECT_UILIMIT_EXITWINDOWS | JOB_OBJECT_UILIMIT_GLOBALATOMS | JOB_OBJECT_UILIMIT_HANDLES | JOB_OBJECT_UILIMIT_READCLIPBOARD | JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS | JOB_OBJECT_UILIMIT_WRITECLIPBOARD;
+		bRes = SetInformationJobObject(hJob, JobObjectBasicLimitInformation, &basic_limit, sizeof(basic_limit)) &&
+			SetInformationJobObject(hJob, JobObjectBasicUIRestrictions, &basic_ui, sizeof(basic_ui)) &&
+			AssignProcessToJobObject(hJob, GetCurrentProcess());
+		w_win32_error = GetLastError();
+		CloseHandle(hJob);
+	}
+	return bRes;
+}
+
 
 #define WINDIVERT_DEVICE_NAME "WinDivert"
 static bool b_isandbox_set = false;
@@ -733,6 +756,8 @@ bool win_sandbox(void)
 		if (logical_net_filter_present() && !SetMandatoryLabelFile("\\\\.\\" WINDIVERT_DEVICE_NAME, SECURITY_MANDATORY_LOW_RID, 0))
 			return FALSE;
 		if (!LowMandatoryLevel())
+			return false;
+		if (!JobSandbox())
 			return false;
 		// for LUA code to find where to store files
 		b_isandbox_set = true;

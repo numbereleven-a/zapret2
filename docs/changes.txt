@@ -107,9 +107,10 @@ v0.7.2
 * nfqws2: clean lua cutoff on profile change
 * zapret-auto: separate hostkey function
 
-v0.7.3
+v0.7.4
 
 * nfqws2, zapret-lib : check tcp sequence range overflow
 * zapret-lib : seq compare functions
 * nfqws2: add l3_len, l4_len to dissect
 * nfqws2: fix broken l7proto profile rediscovery
+* winws2: harden sandbox. disable child process execution , some UI interaction and desktop settings change

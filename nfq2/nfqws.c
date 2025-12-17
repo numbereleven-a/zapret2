@@ -630,13 +630,13 @@ static int win_main()
 		{
 			res=w_win32_error; goto ex;
 		}
+
 		if (!win_sandbox())
 		{
 			res=w_win32_error;
 			DLOG_ERR("Cannot init Windows sandbox\n");
 			goto ex;
 		}
-
 
 		// init LUA only here because of possible sandbox. no LUA code with high privs
 		if (!params.L && !lua_init())
