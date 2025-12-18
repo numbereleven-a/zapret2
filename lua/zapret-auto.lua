@@ -432,6 +432,7 @@ end
 -- arg: instances - number of following instances to be repeated. 1 by default
 -- arg: repeats - number of repeats
 -- arg: stop - do not replay remaining execution plan after 'instances'
+-- arg: clear - clear execution plan after 'instances'
 -- test case : --lua-desync=repeater:repeats=2:instances=2 --lua-desync=argdebug:v=1 --lua-desync=argdebug:v=2 --lua-desync=argdebug:v=3
 function repeater(ctx, desync)
 	local repeats = tonumber(desync.arg.repeats)
@@ -440,6 +441,7 @@ function repeater(ctx, desync)
 	end
 	orchestrate(ctx, desync)
 	local stop = desync.arg.stop
+	local clear = desync.arg.clear
 	local verdict = VERDICT_PASS
 	local instances = tonumber(desync.arg.instances) or 1
 	local repinst = desync.func_instance
@@ -450,10 +452,12 @@ function repeater(ctx, desync)
 	local plancopy = deepcopy(desync.plan)
 	for r=1,repeats do
 		DLOG("repeater: "..repinst.." "..r.."/"..repeats)
-		for i=1,instances do
+		-- nested orchestrators can also pop
+		local ct_end = #desync.plan - instances
+		repeat
 			local instance = plan_instance_pop(desync)
 			verdict = plan_instance_execute(desync, verdict, instance)
-		end
+		until #desync.plan <= ct_end
 		-- rollback desync plan
 		desync.plan = deepcopy(plancopy)
 	end
@@ -461,8 +465,10 @@ function repeater(ctx, desync)
 	for i=1,instances do
 		table.remove(desync.plan,1)
 	end
-	if stop then
+	if clear then
 		plan_clear(desync)
+		return verdict
+	elseif stop then
 		return verdict
 	end
 	-- replay the rest
