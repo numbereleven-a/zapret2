@@ -38,7 +38,7 @@ pktws_check_https_tls()
 	# $1 - test function
 	# $2 - domain
 	# $3 - PRE args for nfqws2
-	local splits_tls='2 1 sniext+1 sniext+4 host+1 midsld 1,midsld 1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
+	local splits_tls='2 1 sniext+1 sniext+4 host+1 midsld 1,midsld 1,midsld,1360 1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
 	local PAYLOAD="--payload tls_client_hello"
 
 	[ "$NOTEST_MULTI_HTTPS" = 1 ] && { echo "SKIPPED"; return; }

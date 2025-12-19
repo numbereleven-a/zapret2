@@ -95,7 +95,7 @@ pktws_check_https_tls()
 	[ "$NOTEST_FAKE_MULTI_HTTPS" = 1 ] && { echo "SKIPPED"; return 0; }
 
 	local testf=$1 domain="$2" pre="$3"
-	local ok ok_any ttls attls f fake fooling splitf splitfs= split splits='2 1 sniext+1 sniext+4 host+1 midsld 1,midsld 1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
+	local ok ok_any ttls attls f fake fooling splitf splitfs= split splits='2 1 sniext+1 sniext+4 host+1 midsld 1,midsld 1,midsld,1360 1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
 	local PAYLOAD="--payload=tls_client_hello"
 
 	shift; shift
