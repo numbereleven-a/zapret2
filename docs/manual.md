@@ -1937,7 +1937,7 @@ function detect_payload_str(ctx, desync)
 * arg: payload - присвоить это значение desync.l7payload в случае наличия подстроки
 * arg: undetected - если присутствует, присвоить это значение desync.l7payload в случае отсутствия подстроки
 
-Пример простейшего протокольного детектора. Ищется подстрока pattern в пейлоаде, в случае нахождения присваивает desync.l7payload = desync.arg.payload , иначе если есть desync.arg.undetected, присваивает desync.l7payload = desync.arg.undetected.
+Пример простейшего протокольного детектора. Ищет подстроку pattern в пейлоаде, в случае нахождения присваивает desync.l7payload = desync.arg.payload , иначе если есть desync.arg.undetected, присваивает desync.l7payload = desync.arg.undetected.
 
 Подобного рода протокольные детекторы не имеют никакой силы для C кода. Он ничего не знает о вашем протоколе и вашем типе пейлоада. Ваше значение нельзя указать в параметре `--payload`.  Но можно использовать [payload фильтры](#standard-payload) многих [desync функций](#библиотека-программ-атаки-на-dpi-zapret-antidpilua).
 
