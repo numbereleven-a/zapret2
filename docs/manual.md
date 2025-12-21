@@ -3762,6 +3762,43 @@ nfqws2 может работать и самостоятельно без скр
 
 Сам nfqws2 ничего не знает о скриптах запуска и файле config, не принимает ссылку на него в командной строке.
 
+| Параметр | Назначение |
+|:---------|:-----------|
+| TMPDIR   | временная директория вместо /tmp . полезно, если на устройстве мало памяти и tmpfs в /tmp не хватает |
+| WS_USER | пользователь, под которым запускается nfqws2. по умолчанию используется автоматическое значение в зависимости от ОС |
+| FWTYPE | тип фаервола - iptables, nftables, ipfw. по умолчанию определяется автоматически |
+| SET_MAXELEM | максимальное количество записей в создаваемых ipset-ах |
+| IPSET_OPT | опции ipset от iptables |
+| IPSET_HOOK | скрипт, который получает имя ipset в $1, выдает в stdout список ip, и они добавляются в ipset |
+| IP2NET_OPT4<br>IP2NET_OPT6 | настройки ip2net для скриптов получения ip листов |
+| MDIG_THREADS | количество потоков mdig. используется при ресолвинге хостлистов |
+| AUTOHOSTLIST_INCOMING_MAXSEQ<br>AUTOHOSTLIST_RETRANS_MAXSEQ<br>AUTOHOSTLIST_RETRANS_THRESHOLD<br>AUTOHOSTLIST_FAIL_THRESHOLD<br>AUTOHOSTLIST_FAIL_TIME<br>AUTOHOSTLIST_UDP_IN<br>AUTOHOSTLIST_UDP_OUT | параметры [автохостлистов](#детектор-неудач-автохостлистов) |
+| AUTOHOSTLIST_DEBUGLOG | включение autohostlist debug log. лог пишется в `ipset/zapret-hosts-auto-debug.log` |
+| GZIP_LISTS | применять ли сжатие gzip для генерируемых хост и ip листов |
+| DESYNC_MARK | марк-бит для предотвращения зацикливания |
+| DESYNC_MARK_POSTNAT | марк-бит для пометки соединений, идущих по схеме POSTNAT |
+| NFQWS2_ENABLE | включение стандартного режима nfqws2 |
+| NFQWS2_PORTS_TCP<br>NFQWS2_PORTS_UDP | порты перехвата для стандартного режима nfqws2 |
+| NFQWS2_TCP_PKT_OUT<br>NFQWS2_TCP_PKT_IN<br>NFQWS2_UDP_PKT_OUT<br>NFQWS2_UDP_PKT_IN | ограничители connbytes по tcp/udp и направлению |
+| NFQWS2_PORTS_TCP_KEEPALIVE<br>NFQWS2_PORTS_UDP_KEEPALIVE | список портов tcp/udp, для которых выключается ограничитель connbytes по исходящему направлению |
+| NFQWS2_OPT | параметры командной строки стандартного режима nfqws2 |
+| MODE_FILTER | режим фильтрации : none,ipset,hostlist,autohostlist |
+| FLOWOFFLOAD | режим offload : donttouch,none,software,hardware |
+| OPENWRT_LAN<br>OPENWRT_WAN4<br>OPENWRT_WAN6 | список через пробел lan и wan интерфейсов для ipv4 и ipv6 в OpenWRT. НЕ ИНТЕРФЕЙСЫ Linux, ИНТЕРФЕЙСЫ netifd ! по умолчанию "lan" и "wan"|
+| IFACE_LAN<br>IFACE_WAN<br>IFACE_WAN6 | список через проблем lan и wan интерфейсов для ipv4 и ipv6 в классическом Linux. ИНТЕРФЕЙСЫ Linux ! |
+| INIT_APPLY_FW | должны ли применять [стартовые скрипты](#стартовые-скрипты) правила firewall |
+| INIT_FW_PRE_UP_HOOK<br>INIT_FW_POST_UP_HOOK<br>INIT_FW_PRE_DOWN_HOOK<br>INIT_FW_POST_DOWN_HOOK | хук-скрипты, вызываемые до, после поднятия и до, после опускания firewall |
+| DISABLE_IPV4<br>DISABLE_IPV6<br> | отключить версии ip протокола |
+| FILTER_TTL_EXPIRED_ICMP | фильтровать "time exceeded" в ответ на пакеты, принадлежащие соединениям, прошедшим через zapret |
+| GETLIST | [скрипт внутри ipset](#система-ведения-листов), вызываемый из `ipset/get_config.sh` . если не указано - `ipset/get_ipban.sh` |
+
+* netifd интерфейсы - это то, что видно в `/etc/config/network` или в Luci, и что берет команда ifstatus. Не являются интерфейсами Linux. Интерфейсы Linux указываются в параметре device в определении интерфейса и видны по команде `ip link`. Например, интерфейс netifd - "lan", интерфейс Linux - "br-lan". В OPENWRT_LAN надо вписывать "lan", а не "br-lan", иначе это работать не будет.
+* Указание LAN интерфейсов нужно только для flow offloading в nftables, больше ни для чего не используется.
+* Параметры командной строки `NFQWS2_OPT` включают только стратегию. Стандартные LUA файлы, служебные параметры типа `--qnum` или `--user` добавляются автоматически. Можно добавлять свои `--blob` или `--lua-init`.
+* `NFQWS2_OPT` берет маркеры `<HOSTLIST>` и `<HOSTLIST_NOAUTO>`. Это подстановка стандартных листов. Маркеры замещаются на параметры `--hostlist` и `--hostlist-auto` в зависимости от режима `MODE_FILTER'. `<HOSTLIST_NOAUTO>` добавляет автохослист как обычный лист без авто. В параметры вписываются только те файлы стандартных листов, которые по факту есть. Маркеры могут вписываться в разные профили, и только вы можете знать куда их вписывать , а куда нет, исходя из логики ваших стратегий.
+* Прямое указание параметров в `NFQWS2_OPT` типа `--hostlist=/opt/zapret2/ipset/zapret-hosts-user.txt` крайне не приветствуется, поскольку ломает логику `MODE_FILTER` и скриптов получения листов - их результат может не быть учтен.
+* Класть свои файлы в `/opt/zapret2` чревато тем, что их снесет инсталятор при обновлении zapret2. Используете расположение вне каталога zapret2.
+
 
 
 ## Система ведение листов
@@ -3790,6 +3827,8 @@ ip листы разделяются на ipv4 и ipv6. ipv6 листы имею
 | zapret-hosts.txt | генерируемый | включающий | zapret-ip.txt<br>zapret-ip6.txt |
 
 ### Скрипты ipset
+
+Все скрипты, генерирующие хостлисты, вызывают `get_ipban.sh`. Все скрипты, генерирующие ip листы, вызывают `get_user.sh`. Можно сказать, что ipban ресолвится всегда вне зависимости от того, используете ли вы хостлисты или ip листы, а user листы ресолвятся всегда, если вы используете любые скрипты получения ip листов.
 
 #### clear_lists.sh
 
