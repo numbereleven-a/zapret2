@@ -164,7 +164,7 @@ function standard_failure_detector(desync, crec)
 							dis.ip6.ip6_flow = desync.track.pos.reverse.ip6_flow
 						end
 						DLOG("standard_failure_detector: sending RST to retransmitter")
-						rawsend_dissect(dis)
+						rawsend_dissect(dis, {ifout = desync.ifin})
 					end
 				end
 			end
