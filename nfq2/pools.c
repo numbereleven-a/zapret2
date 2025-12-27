@@ -139,12 +139,16 @@ static struct str_list *strlist_entry_alloc(const char *str)
 {
 	struct str_list *entry = malloc(sizeof(struct str_list));
 	if (!entry) return false;
-	entry->str = strdup(str);
-	if (!entry->str)
+	if (str)
 	{
-		free(entry);
-		return NULL;
+		if (!(entry->str = strdup(str)))
+		{
+			free(entry);
+			return NULL;
+		}
 	}
+	else
+		entry->str = NULL;
 	return entry;
 }
 
@@ -244,14 +248,13 @@ static struct str2_list *str2list_entry_copy(const struct str2_list *entry)
 {
 	struct str2_list *e2 = str2list_entry_alloc();
 	if (!e2) return NULL;
-	e2->str1 = strdup(entry->str1);
-	e2->str2 = strdup(entry->str2);
-	if (!e2->str1 || !e2->str2)
-	{
-		str2list_entry_destroy(e2);
-		return false;
-	}
+
+	if (entry->str1) if (!(e2->str1 = strdup(entry->str1))) goto err;
+	if (entry->str2) if (!(e2->str2 = strdup(entry->str2))) goto err;
 	return e2;
+err:
+	str2list_entry_destroy(e2);
+	return false;
 }
 bool str2list_copy(struct str2_list_head *to, const struct str2_list_head *from)
 {
