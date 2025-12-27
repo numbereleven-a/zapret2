@@ -254,7 +254,7 @@ static struct str2_list *str2list_entry_copy(const struct str2_list *entry)
 	return e2;
 err:
 	str2list_entry_destroy(e2);
-	return false;
+	return NULL;
 }
 bool str2list_copy(struct str2_list_head *to, const struct str2_list_head *from)
 {
