@@ -26,8 +26,6 @@ jobs:
             tool: aarch64-unknown-linux-musl
           - arch: arm
             tool: arm-unknown-linux-musleabi
-          - arch: arm-old
-            tool: arm-unknown-linux-musleabi
           # - arch: armhf
           #   tool: arm-unknown-linux-musleabihf
           # - arch: armv7
@@ -110,7 +108,7 @@ jobs:
           export PKG_CONFIG_PATH=$DEPS_DIR/lib/pkgconfig
           export STAGING_DIR=$RUNNER_TEMP
 
-          if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == ppc ]] || [[ "$ARCH" == x86 ]] || [[ "$ARCH" == arm-old ]]; then
+          if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == ppc ]] || [[ "$ARCH" == x86 ]] ; then
             # use classic lua
             wget -qO- https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz
             (
@@ -529,7 +527,6 @@ jobs:
                 *-android-x86_64 )      run_dir android-x86_64 ;;
                 *-freebsd-x86_64 )      run_dir freebsd-x86_64 ;;
                 *-linux-arm )           run_dir linux-arm ;;
-                *-linux-arm-old )       run_dir linux-arm-old ;;
                 *-linux-arm64 )         run_dir linux-arm64 ;;
                 *-linux-mips64 )        run_dir linux-mips64 ;;
                 *-linux-mipselsf )      run_dir linux-mipsel ;;
