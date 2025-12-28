@@ -1330,8 +1330,8 @@ bool IsQUICInitial(const uint8_t *data, size_t len)
 
 	uint64_t offset=5, sz;
 
-	// DCID. must be present
-	if (!data[offset] || data[offset] > QUIC_MAX_CID_LENGTH) return false;
+	// DCID
+	if (data[offset] > QUIC_MAX_CID_LENGTH) return false;
 	offset += 1 + data[offset];
 
 	// SCID
