@@ -2302,6 +2302,13 @@ function logical_xor(a,b)
 
 Возвращает результат логического xor a и b.  `result = a and not b or not a and b`
 
+```
+function array_search(a, v)
+function array_field_search(a, f, v)
+```
+
+Линейный поиск в таблице a значения v. `array_field_search` предполагает, что элемент таблицы a - таблица, поиск идет по полю f.
+
 ## Работа со строками
 
 ### in_list
@@ -2320,13 +2327,6 @@ function find_next_line(s, pos)
 
 Работает с многострочным текстом s. Строки разделяются EOL - '\n' или '\r\n'.
 Возвращается 2 значения - позиция начала строки и начала следующей строки, либо конца текста s, если строк больше нет.
-
-```
-function array_search(a, v)
-function array_field_search(a, f, v)
-```
-
-Линейный поиск в таблице a значения v. `array_field_search` предполагает, что элемент таблицы a - таблица, поиск идет по полю f.
 
 ## Обслуживание raw string
 
