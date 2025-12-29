@@ -2564,7 +2564,7 @@ function tls_reconstruct(tdis)
 И вызвать TLS запрос.
 
 <details>
-  <summary><b>Пример диссекта TLS от запроса к httsp://google.com</b></summary>
+  <summary><b>Пример диссекта TLS от запроса к https://google.com</b></summary>
 <pre>
 .rec
   .1
