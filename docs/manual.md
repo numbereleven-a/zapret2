@@ -162,6 +162,7 @@
     - [wssize](#wssize)
   - [Фейки](#фейки)
     - [syndata](#syndata)
+    - [tls_client_hello_clone](#tls_client_hello_clone)
     - [fake](#fake)
     - [rst](#rst)
   - [TCP сегментация](#tcp-сегментация)
