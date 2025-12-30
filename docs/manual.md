@@ -2562,6 +2562,8 @@ function tls_reconstruct(tdis)
 
 Функции не работают с DTLS. В случае ошибки возвращается nil.
 
+offset означает смещение, начиная с 1, в raw строке tls.
+
 Простейший способ получить образец диссекта : `--payload=tls_client_hello --lua-desync=luaexec:code="var_debug(tls_dissect(desync.reasm_data))"`.
 И вызвать TLS запрос.
 
