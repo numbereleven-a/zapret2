@@ -2470,7 +2470,7 @@ function dissect_nld(domain, level)
 ```
 function http_dissect_req(http)
 function http_dissect_reply(http)
-function http_reconstruct_req(hdis)
+function http_reconstruct_req(hdis, unixeol)
 ```
 
 Разборка HTTP запроса или ответа http. http представляет собой многострочный текст.
@@ -2478,7 +2478,7 @@ function http_reconstruct_req(hdis)
 В заголовках выдаются позиции начала и конца названия заголовка и самого значения.
 Названия полей в таблице headers соответствуют названию заголовков в нижнем регисте. Все позиции - внутри строки http.
 
-Реконструктор http запроса берет таблицу-разбор и воссоздает raw string.
+Реконструктор http запроса берет таблицу-разбор и воссоздает raw string. Параметр unixeol заменяет стандартный для http перевод сктроки 0A0D на 0A. Это нестандарт и ломает все сервера, кроме nginx.
 
 <details>
   <summary><b>Пример разборки http запроса `http://testhost.com/testuri`</b></summary>
