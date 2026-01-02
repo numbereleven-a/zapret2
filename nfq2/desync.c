@@ -1492,6 +1492,81 @@ static void udp_standard_protocol_probe(const uint8_t *data_payload, size_t len_
 	protocol_probe(testers, sizeof(testers) / sizeof(*testers), data_payload, len_payload, ctrack, l7proto, l7payload);
 }
 
+static bool feed_dns_response(const uint8_t *a, size_t len)
+{
+	if (!params.cache_hostname) return true;
+
+	// check of minimum header length and response flag
+	uint16_t k, off, dlen, qcount = a[4]<<8 | a[5], acount = a[6]<<8 | a[7];
+	char s_ip[40], name[256];
+	const uint8_t *b = a, *p, *e;
+	size_t nl;
+
+	if (len<12 || !(a[2]&0x80)) return false;
+	a+=12; len-=12;
+	for(k=0;k<qcount;k++)
+	{
+		while (len && *a)
+		{
+			if ((*a+1)>len) return false;
+			// skip to next label
+			len -= *a+1; a += *a+1;
+		}
+		if (len<5) return false;
+		// skip zero length label, type, class
+		a+=5; len-=5;
+	}
+	for(k=0;k<acount;k++)
+	{
+		// 11 higher bits indicate pointer
+		if (len<12 || (*a & 0xC0)!=0xC0) return false;
+
+		off = (*a & 0x3F)<<8 | a[1];
+		e = a + len;
+		p = b + off;
+		if (p >= e) return false;
+		for (nl=0; *p ;)
+		{
+			if ((p+*p+1)>=e || (*p+1)>=(sizeof(name)-nl)) return false;
+			if (nl)	name[nl++] = '.';
+			memcpy(name+nl, p+1, *p);
+			nl += *p;
+			p += *p + 1;
+		}
+		name[nl] = 0;
+
+		dlen = a[10]<<8 | a[11];
+		if (len<(dlen+12)) return false;
+		if (a[4]==0 && a[5]==1 && a[2]==0) // IN class and higher byte of type = 0
+		{
+			switch(a[3])
+			{
+				case 1: // A
+					if (dlen!=4) break;
+					if (params.debug)
+					{
+						if (inet_ntop(AF_INET, a+12, s_ip, sizeof(s_ip)))
+							DLOG("DNS response for '%s' : %s\n", name, s_ip);
+						if (ipcache_put_hostname((struct in_addr *)(a+12), NULL, name, false))
+							DLOG("ipcache updated\n");
+					}
+					break;
+				case 28: // AAAA
+					if (dlen!=16) break;
+					if (params.debug)
+					{
+						if (inet_ntop(AF_INET6, a+12, s_ip, sizeof(s_ip)))
+							DLOG("DNS response for '%s' : %s\n", name, s_ip);
+						if (ipcache_put_hostname(NULL, (struct in6_addr *)(a+12), name, false))
+							DLOG("ipcache updated\n");
+					}
+					break;
+			}
+		}
+		len -= 12+dlen; a += 12+dlen;
+	}
+	return true;
+}
 
 static uint8_t dpi_desync_udp_packet_play(
 	unsigned int replay_piece, unsigned int replay_piece_count, size_t reasm_offset,
@@ -1783,6 +1858,10 @@ static uint8_t dpi_desync_udp_packet_play(
 		}
 
 		reasm_client_cancel(ctrack);
+
+		if (l7payload==L7P_DNS_RESPONSE)
+			feed_dns_response(dis->data_payload, dis->len_payload);
+
 
 		if (bHaveHost)
 		{

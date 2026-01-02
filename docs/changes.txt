@@ -155,3 +155,4 @@ v0.8.1
 0.8.2
 
 * nfqws2: do not start if NFQWS2_COMPAT_VER unexpected
+* nfqws2: cache dns response IP addresses if --ipcache-hostname enabled
