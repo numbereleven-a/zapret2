@@ -6,19 +6,25 @@ zapret_custom_firewall()
 	# $1 - 1 - run, 0 - stop
 	local filt="-p udp --sport 53"
 	local jump="-j NFQUEUE --queue-num $QNUM --queue-bypass"
-	local chain lan lanifs
+	local rule chain lan lanifs
 
 	get_lanif lanifs
 
 	# router
 	for lan in $lanifs; do
-		ipt_add_del $1 FORWARD -o $lan $filt $jump
-		ipt6_add_del $1 FORWARD -o $lan $filt $jump
+		rule="-o $lan $filt $jump"
+		ipt_print_op $1 "$rule" "nfqws FORWARD (qnum $QNUM)"
+		ipt_add_del $1 FORWARD $rule
+		ipt_print_op $1 "$rule" "nfqws FORWARD (qnum $QNUM)" 6
+		ipt6_add_del $1 FORWARD $rule
 	done
 	# dns client server
 	for chain in INPUT OUTPUT ; do
-		ipt_add_del $1 $chain $filt $jump
-		ipt6_add_del $1 $chain $filt $jump
+		rule="$filt $jump"
+		ipt_print_op $1 "$rule" "nfqws $chain (qnum $QNUM)"
+		ipt_add_del $1 $chain $rule
+		ipt_print_op $1 "$rule" "nfqws $chain (qnum $QNUM)" 6
+		ipt6_add_del $1 $chain $rule
 	done
 }
 
@@ -26,17 +32,22 @@ zapret_custom_firewall_nft()
 {
 	# stop logic is not required
 
+	local rule="udp sport 53 queue num $QNUM bypass"
+
 	# dns client
+	nft_print_op "oifname @lanif $rule" "nfqws forward (qnum $QNUM)" "4+6"
 	nft_add_chain forward_dns_feed "type filter hook forward priority mangle;"
-	nft_add_rule forward_dns_feed oifname @lanif udp sport 53 queue num $QNUM bypass
+	nft_add_rule forward_dns_feed oifname @lanif $rule
 
 	# router
+	nft_print_op "$rule" "nfqws input (qnum $QNUM)" "4+6"
 	nft_add_chain input_dns_feed "type filter hook input priority mangle;"
-	nft_add_rule input_dns_feed udp sport 53 queue num $QNUM bypass
+	nft_add_rule input_dns_feed $rule
 
 	# dns server
+	nft_print_op "$rule" "nfqws output (qnum $QNUM)" "4+6"
 	nft_add_chain output_dns_feed "type filter hook output priority mangle;"
-	nft_add_rule output_dns_feed udp sport 53 queue num $QNUM bypass
+	nft_add_rule output_dns_feed $rule
 }
 
 zapret_custom_firewall_nft_flush()
