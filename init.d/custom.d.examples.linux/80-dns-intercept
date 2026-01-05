@@ -34,12 +34,12 @@ zapret_custom_firewall_nft()
 
 	local rule="udp sport 53 queue num $QNUM bypass"
 
-	# dns client
+	# router
 	nft_print_op "oifname @lanif $rule" "nfqws forward (qnum $QNUM)" "4+6"
 	nft_add_chain forward_dns_feed "type filter hook forward priority mangle;"
 	nft_add_rule forward_dns_feed oifname @lanif $rule
 
-	# router
+	# dns client
 	nft_print_op "$rule" "nfqws input (qnum $QNUM)" "4+6"
 	nft_add_chain input_dns_feed "type filter hook input priority mangle;"
 	nft_add_rule input_dns_feed $rule
