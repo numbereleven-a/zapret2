@@ -1502,6 +1502,32 @@ function gzip_file(filename, data, level, memlevel, compress_block_size)
 	f:close()
 	gzip_end(gz)
 end
+-- reads the whole file
+function readfile(filename)
+	local f, err = io.open(filename, "r")
+	if not f then
+		error("readfile: "..err)
+	end
+	local s,err = f:read("*a")
+	f:close()
+	if err then
+		error("readfile: "..err)
+	end
+	return s
+end
+-- reads plain or gzipped file with transparent decompression
+function z_readfile(filename)
+	return is_gzip_file(filename) and gunzip_file(filename) or readfile(filename)
+end
+-- write data to filename
+function writefile(filename, data)
+	local f, err = io.open(filename, "w")
+	if not f then
+		error("writefile: "..err)
+	end
+	local s,err = f:write(data)
+	f:close()
+end
 
 -- DISSECTORS
 
