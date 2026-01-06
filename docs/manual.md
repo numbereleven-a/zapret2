@@ -60,6 +60,9 @@
       - [aes\_gcm](#aes_gcm)
       - [aes\_ctr](#aes_ctr)
       - [hkdf](#hkdf)
+    - [Компрессия](#компрессия)
+      - [gunzip](#gunzip)
+      - [gzip](#gzip)
     - [Системные функции](#системные-функции)
       - [uname](#uname)
       - [clock\_gettime](#clock_gettime)
@@ -119,6 +122,7 @@
     - [genhost](#genhost)
     - [host\_ip](#host_ip)
   - [Операции с именами файлов и путями](#операции-с-именами-файлов-и-путями)
+  - [Компрессия данных](#компрессия-данных)
   - [autottl](#autottl)
   - [Операции с диссектами](#операции-с-диссектами)
     - [standard ipid](#standard-ipid)
@@ -1919,6 +1923,33 @@ HKDF - HMAC-based Key Derivation Function. Генератор ключей на 
 - okm_len - требуемая длина okm - output keying material
 - возвращается raw строка - okm
 
+### Компрессия
+
+#### gunzip
+
+```
+function gunzip_init(windowBits)
+function gunzip_end(zstream)
+function gunzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_size)
+```
+
+* gunzip_init создает возвращает контекст gzip потока для последующих вызовов других функций. Значение windowBits см. в документации по zlib (по умолчанию 47).
+* gunzip_end освобождает контекст gzip. **ВАЖНО !** gunzip_end должен быть вызван всегда после окончания использования потока, иначе это приведет к memory leaks !!
+* gunzip_inflate разжимает очередную часть зипованных данных. Данные можно скармливать частями. Расжатые части конкатенируются для получения полных данных. Возвращается 2 аргумента : расжатые данные и bool признак конца gzip. В случае испорченных данных или при нехватке памяти возвращается nil.
+
+#### gzip
+
+```
+function gzip_init(windowBits, level, memlevel)
+function gzip_end(zstream)
+function gzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_size)
+```
+
+* gunzip_init создает возвращает контекст gzip потока для последующих вызовов других функций. Значение windowBits см. в документации по zlib (по умолчанию 31). level - уровень сжатия от 1 до 9 (по умолчанию 9), memlevel - допустимый уровень использования памяти от 1 до 8 (по умолчанию 8).
+* gunzip_end освобождает контекст gzip. **ВАЖНО !** gunzip_end должен быть вызван всегда после окончания использования потока, иначе это приведет к memory leaks !!
+* gunzip_deflate cжимает очередную часть данных. Данные можно скармливать частями. Cжатые части конкатенируются для получения полных данных. Для финализации потока по окончанию скармливания данных функция должна быть вызвана с data=nil или data="". Возвращается 2 аргумента : сжатые данные и bool признак конца gzip. При ошибках gzip или нехватке памяти возвращается nil.
+
+
 ### Системные функции
 
 #### uname
@@ -3024,6 +3055,27 @@ function writeable_file_name(filename)
 - append_path дописывает имя файла или каталога file к пути path, разделяя их знаком '/'
 - writeable_file_name возвращает filename, если filename содержит абсолютный путь или env `WRITEABLE` отсутствует.
 Иначе берется путь из env `WRITEABLE` и к нему дописывается имя файла filename через append_path.
+
+## Компрессия данных
+
+```
+function is_gzip_file(filename)
+```
+
+true, если файл является gzip, иначе false. При ошибке открытия файла вызывается error.
+
+```
+function gunzip_file(filename, read_block_size)
+```
+
+Расжимает файл и возвращает raw string. В случае ошибки открытия или чтения файла вызывается error. При испорченных gzip данных или нехватке памяти возвращается nil. read_block_size - частями какого размера читается файл (по умолчанию 16K).
+
+```
+function gzip_file(filename, data, level, memlevel, compress_block_size)
+```
+
+Сжимает raw строку в gzip файл. В случае ошибки открытия или чтения файла вызывается error. При испорченных gzip данных или нехватке памяти возвращается nil.
+level - уровень сжатия от 1 до 9 (по умолчанию 9), memlevel - допустимый уровень использования памяти от 1 до 8 (по умолчанию 8). compress_block_size - частями какого размера жмется файл (по умолчанию 16K).
 
 ## autottl
 
