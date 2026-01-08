@@ -91,13 +91,13 @@ zapret_custom_firewall_nft()
 	local first_packets_only="$nft_connbytes 1-$NFQWS_MY1_PKT_OUT"
 
 	[ "$DISABLE_IPV4" != 1 ] && {
-	        make_comma_list subnets $NFQWS_MY1_SUBNETS4
+		make_comma_list subnets $NFQWS_MY1_SUBNETS4
 		nft_create_set $NFQWS_MY1_NAME4 "type ipv4_addr; size $NFQWS_MY1_IPSET_SIZE; auto-merge; flags interval;"
 		nft_flush_set $NFQWS_MY1_NAME4
 		nft_add_set_element $NFQWS_MY1_NAME4 "$subnets"
 	}
 	[ "$DISABLE_IPV6" != 1 ] && {
-	        make_comma_list subnets $NFQWS_MY1_SUBNETS6
+		make_comma_list subnets $NFQWS_MY1_SUBNETS6
 		nft_create_set $NFQWS_MY1_NAME6 "type ipv6_addr; size $NFQWS_MY1_IPSET_SIZE; auto-merge; flags interval;"
 		nft_flush_set $NFQWS_MY1_NAME6
 		nft_add_set_element $NFQWS_MY1_NAME6 "$subnets"
