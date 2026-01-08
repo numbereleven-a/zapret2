@@ -12,8 +12,7 @@ static bool addpool(ipset *ips, char **s, const char *end, int *ct)
 	struct cidr4 c4;
 	struct cidr6 c6;
 
-	// advance until eol
-	for (p=*s; p<end && *p && *p!='\r' && *p != '\n'; p++);
+	for (p=*s; p<end && *p && *p!=' ' && *p!='\t' && *p!='\r' && *p != '\n'; p++);
 
 	// comment line
 	if (!(**s == '#' || **s == ';' || **s == '/' || **s == '\r' || **s == '\n' ))
@@ -22,7 +21,6 @@ static bool addpool(ipset *ips, char **s, const char *end, int *ct)
 		if (l>=sizeof(cidr)) l=sizeof(cidr)-1;
 		memcpy(cidr,*s,l);
 		cidr[l]=0;
-		rtrim(cidr);
 
 		if (parse_cidr4(cidr,&c4))
 		{
@@ -46,6 +44,8 @@ static bool addpool(ipset *ips, char **s, const char *end, int *ct)
 			DLOG_ERR("bad ip or subnet : %s\n",cidr);
 	}
 
+	// skip remaining non-eol chars
+	for (; p<end && *p && *p!='\r' && *p != '\n'; p++);
 	// advance to the next line
 	for (; p<end && (!*p || *p=='\r' || *p=='\n') ; p++);
 	*s = p;

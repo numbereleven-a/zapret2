@@ -8,13 +8,8 @@ static bool addpool(hostlist_pool **hostlist, char **s, const char *end, int *ct
 {
 	char *p=*s;
 
-	// comment line
-	if ( *p == '#' || *p == ';' || *p == '/' || *p == '\r' || *p == '\n')
-	{
-		// advance until eol
-		for (; p<end && *p && *p!='\r' && *p != '\n'; p++);
-	}
-	else
+	// comment line ?
+	if ( *p != '#' && *p != ';' && *p != '/' && *p != '\r' && *p != '\n')
 	{
 		// advance until eol lowering all chars
 		uint32_t flags = 0;
@@ -23,7 +18,7 @@ static bool addpool(hostlist_pool **hostlist, char **s, const char *end, int *ct
 			p = ++(*s);
 			flags |= HOSTLIST_POOL_FLAG_STRICT_MATCH;
 		}
-		for (; p<end && *p && *p!='\r' && *p != '\n'; p++) *p=tolower(*p);
+		for (; p<end && *p && *p!=' ' && *p!='\t' && *p!='\r' && *p != '\n'; p++) *p=tolower(*p);
 		if (!HostlistPoolAddStrLen(hostlist, *s, p-*s, flags))
 		{
 			HostlistPoolDestroy(hostlist);
@@ -32,6 +27,8 @@ static bool addpool(hostlist_pool **hostlist, char **s, const char *end, int *ct
 		}
 		if (ct) (*ct)++;
 	}
+	// skip remaining non-eol chars
+	for (; p<end && *p && *p!='\r' && *p != '\n'; p++);
 	// advance to the next line
 	for (; p<end && (!*p || *p=='\r' || *p=='\n') ; p++);
 	*s = p;

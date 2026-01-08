@@ -166,3 +166,5 @@ v0.8.1
 0.8.3
 
 * nfqws2, zapret-lib: gzip compression and decompression
+* nfqws2: ignore trailing spaces and tabs in hostlists and ipsets. "host.com   " or "1.2.3.4 " are ok now
+
