@@ -30,7 +30,7 @@
 #endif
 #include <time.h>
 
-#define RESOLVER_EAGAIN_ATTEMPTS 2
+#define RESOLVER_EAGAIN_ATTEMPTS 3
 
 static void trimstr(char *s)
 {
