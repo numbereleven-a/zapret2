@@ -156,7 +156,7 @@
   - [Standard parameter sets](#standard-parameter-sets)
     - [standard direction](#standard-direction)
     - [standard payload](#standard-payload)
-  - [Base Functions](#base-functions)
+  - [Base functions](#base-functions)
     - [drop](#drop)
     - [send](#send)
     - [pktmod](#pktmod)
@@ -222,7 +222,7 @@
     - [IP block check](#ip-block-check)
       - [Examples of domain-only blocking without IP blocking](#examples-of-domain-only-blocking-without-ip-blocking)
       - [Example of full IP block or TCP port block in the absence of domain blocking](#example-of-full-ip-block-or-tcp-port-block-in-the-absence-of-domain-blocking)
-    - [Standard Tests](#standard-tests)
+    - [Standard tests](#standard-tests)
       - [standard test](#standard-test)
       - [custom test](#custom-test)
   - [Summary](#summary)
@@ -2782,7 +2782,7 @@ The following code example searches for the SNI extension within the `tdis` diss
 	table.insert(tdis.handshake[TLS_HANDSHAKE_TYPE_CLIENT].dis.ext[idx_sni].dis.list, { name = "example.com", type = 0 } )
 ```
 
-## Working with L3 and L4 protocol Elements
+## Working with L3 and L4 protocol elements
 
 ### find_tcp_options
 
@@ -3262,7 +3262,7 @@ Executes the entire [execution plan](#execution_plan) from `desync.plan`, respec
 
 # zapret-antidpi.lua DPI attack program library
 
-## Standard sarameter sets
+## Standard parameter sets
 
 Many functions accept standard sets of arguments classified by their purpose.
 
@@ -3294,7 +3294,7 @@ The payload filter accepts a list of payload types. A list of known payload type
 | :------ | :----------------------------------------------------------------------------------- |
 | payload | A comma-separated list of allowed payloads. A leading `~` indicates inversion (NOT). |
 
-## Base Functions
+## Base functions
 
 ### drop
 
@@ -4359,7 +4359,6 @@ SEQOVL_PATTERN_HTTP - path to the seqovl pattern file for HTTP
 SEQOVL_PATTERN_HTTPS - path to the seqovl pattern file for HTTPS
 
 MULTIDISORDER=multidisorder_legacy - replace multidisorder with the version from nfqws1
-```
 
 NOTEST_BASIC_HTTP=1 - disable 10-http-basic.sh tests
 NOTEST_MISC_HTTP=1 - disable http 15-misc.sh tests
@@ -4487,7 +4486,6 @@ nfqws2 itself is unaware of the startup scripts or the config file and does not 
 | IPSET_HOOK | A script that receives the ipset name as $1 and outputs a list of IPs to stdout, which are then added to the ipset. |
 | IP2NET_OPT4<br>IP2NET_OPT6 | ip2net settings for scripts used to retrieve IP lists. |
 | MDIG_THREADS | The number of mdig threads to use. This is utilized when resolving hostlists. |
-
 | MDIG_EAGAIN                                                                                                                                                                                                                         | Number of attempts when receiving EAI_AGAIN                                                                                                   |
 | MDIG_EAGAIN_DELAY                                                                                                                                                                                                                   | Delay in ms between attempts when receiving EAI_AGAIN                                                                                        |
 | AUTOHOSTLIST_INCOMING_MAXSEQ<br>AUTOHOSTLIST_RETRANS_MAXSEQ<br>AUTOHOSTLIST_RETRANS_THRESHOLD<br>AUTOHOSTLIST_RETRANS_RESET<br>AUTOHOSTLIST_FAIL_THRESHOLD<br>AUTOHOSTLIST_FAIL_TIME<br>AUTOHOSTLIST_UDP_IN<br>AUTOHOSTLIST_UDP_OUT | [Autohostlist](#autohostlist-failure-detector) parameters                                                                                     |
@@ -4499,7 +4497,6 @@ nfqws2 itself is unaware of the startup scripts or the config file and does not 
 | POSTNAT                                                                                                                                                                                                                             | Use post-NAT interception mode on nftables. Default is 1. On iptables, interception is always pre-NAT.                                        |
 | NFQWS2_ENABLE                                                                                                                                                                                                                       | Enable standard nfqws2 mode                                                                                                                   |
 | NFQWS2_PORTS_TCP<br>NFQWS2_PORTS_UDP                                                                                                                                                                                                | Interception ports for standard nfqws2 mode                                                                                                   |
-
 | NFQWS2_TCP_PKT_OUT<br>NFQWS2_TCP_PKT_IN<br>NFQWS2_UDP_PKT_OUT<br>NFQWS2_UDP_PKT_IN                                                                                                                                                  | connbytes limiters by TCP/UDP and direction for standard nfqws2 mode                                                                          |
 | NFQWS2_PORTS_TCP_KEEPALIVE<br>NFQWS2_PORTS_UDP_KEEPALIVE                                                                                                                                                                            | List of TCP/UDP ports for which the outgoing connbytes limiter is disabled in standard nfqws2 mode                                            |
 | NFQWS2_OPT                                                                                                                                                                                                                          | Command-line parameters for standard nfqws2 mode                                                                                              |
@@ -4510,7 +4507,6 @@ nfqws2 itself is unaware of the startup scripts or the config file and does not 
 | INIT_APPLY_FW                                                                                                                                                                                                                       | Whether [startup scripts](#startup-scripts) should apply firewall rules                                                                       |
 | INIT_FW_PRE_UP_HOOK<br>INIT_FW_POST_UP_HOOK<br>INIT_FW_PRE_DOWN_HOOK<br>INIT_FW_POST_DOWN_HOOK                                                                                                                                      | Hook scripts called before/after bringing the firewall up and before/after taking it down                                                     |
 | DISABLE_IPV4<br>DISABLE_IPV6<br>                                                                                                                                                                                                    | Disable specific IP protocol versions                                                                                                         |
-
 | FILTER_TTL_EXPIRED_ICMP | Filter "time exceeded" messages in response to packets belonging to flows processed by zapret |
 | GETLIST | [Script within ipset](#list-management-system) called from `ipset/get_config.sh`. Defaults to `ipset/get_ipban.sh` if not specified |
 
