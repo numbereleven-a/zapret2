@@ -243,7 +243,7 @@
       - [get\_antizapret\_domains.sh](#get_antizapret_domainssh)
       - [get\_refilter\_\*.sh](#get_refilter_sh)
       - [get\_reestr\_\*.sh](#get_reestr_sh)
-    - [ipban System](#ipban-system)
+    - [ipban system](#ipban-system)
   - [Startup scripts](#startup-scripts)
     - [Firewall integration](#firewall-integration)
       - [OpenWRT firewall integration](#openwrt-firewall-integration)
@@ -260,7 +260,7 @@
     - [systemd integration principles](#systemd-integration-principles)
     - [systemd cheat sheet](#systemd-cheat-sheet)
     - [openrc integration principles](#openrc-integration-principles)
-    - [openrc cheat Sheet](#openrc-cheat-sheet)
+    - [openrc cheat sheet](#openrc-cheat-sheet)
   - [Alternative installation on systemd](#alternative-installation-on-systemd)
   - [Other firmwares](#other-firmwares)
 
@@ -4470,7 +4470,7 @@ On Windows, no dedicated startup system is required—everything is typically ha
 
 On BSD, only the ipset list retrieval system is functional. On FreeBSD, it can load ipsets (tables) into ipfw. On OpenBSD, pf loads the IP list files directly.
 
-## config File
+## config file
 
 Used by all components of the startup scripts, this file is named "config" and is located in the root of the zapret directory. It is a shell include file where variables are assigned and comments starting with '#' are supported. You can also use any shell constructs, such as variable referencing or arithmetic operators.
 
@@ -4917,7 +4917,7 @@ Binary files are only present in releases. They are missing after a `git clone`.
 
 The actions performed by the installer for integration with various Linux versions are described below. You can opt out of the installer by performing these steps manually and configuring the [config file](#config-file).
 
-### OpenWRT Integration principles
+### OpenWRT integration principles
 
 1. Autostart.
 
@@ -5016,7 +5016,7 @@ On classic Linux distributions with systemd, you can use the provided template u
 
 This method does not apply ip/nf tables rules — you will have to handle that separately, as well as write the rules themselves. The rules must be placed somewhere so they are applied after the system starts. For example, you can create a separate systemd unit that runs a shell script or `nft -f /path/to/file.nft`.
 
-## Other Firmwares
+## Other firmwares
 
 For static binaries, the host environment doesn't matter: PC, Android, set-top box, router, or any other device. Any firmware or Linux distribution will work; static binaries run on everything. They only require a kernel with the necessary build options or modules. However, in addition to binaries, the project uses scripts that rely on certain standard utilities.
 
