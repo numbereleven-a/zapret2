@@ -769,19 +769,41 @@ static int luacall_clock_gettime(lua_State *L)
 	LUA_STACK_GUARD_RETURN(L,2)
 }
 
+static void lua_mt_init_desync_ctx(lua_State *L)
+{
+	luaL_newmetatable(L, "desync_ctx");
+	lua_pop(L, 1);
+}
 static t_lua_desync_context *lua_desync_ctx(lua_State *L)
 {
-	if (lua_isnil(L,1))
-		luaL_error(L, "missing ctx");
-	if (!lua_islightuserdata(L,1))
-		luaL_error(L, "bad ctx - invalid data type");
-
-	t_lua_desync_context *ctx = lua_touserdata(L,1);
-	// ensure it's really ctx. LUA could pass us any lightuserdata pointer
-	if (ctx->magic!=MAGIC_CTX)
-		luaL_error(L, "bad ctx - magic bytes invalid");
-
+	if (lua_isnil(L,1)) luaL_error(L, "missing ctx");
+	t_lua_desync_context *ctx = (t_lua_desync_context *)luaL_checkudata(L, 1, "desync_ctx");
+	if (!ctx->valid) luaL_error(L, "ctx is invalid");
 	return ctx;
+}
+static void lua_desync_ctx_create(lua_State *L)
+{
+	if (!params.ref_desync_ctx)
+	{
+		LUA_STACK_GUARD_ENTER(L)
+
+		params.desync_ctx = (t_lua_desync_context *)lua_newuserdata(L, sizeof(t_lua_desync_context));
+		memset(params.desync_ctx, 0, sizeof(t_lua_desync_context));
+		luaL_getmetatable(L, "desync_ctx");
+		lua_setmetatable(L, -2);
+		params.ref_desync_ctx = luaL_ref(params.L, LUA_REGISTRYINDEX);
+
+		LUA_STACK_GUARD_LEAVE(L,0)
+	}
+}
+static void lua_desync_ctx_destroy(lua_State *L)
+{
+	if (params.ref_desync_ctx)
+	{
+		luaL_unref(L, LUA_REGISTRYINDEX, params.ref_desync_ctx);
+		params.ref_desync_ctx = 0;
+		params.desync_ctx = NULL;
+	}
 }
 
 static int luacall_instance_cutoff(lua_State *L)
@@ -2846,14 +2868,19 @@ zerr:
 
 // ----------------------------------------
 
+void lua_cleanup(lua_State *L)
+{
+	lua_desync_ctx_destroy(L);
+	// conntrack holds lua state. must clear it before lua shoudown
+	ConntrackPoolDestroy(&params.conntrack);
+}
 
 void lua_shutdown()
 {
 	if (params.L)
 	{
 		DLOG("LUA SHUTDOWN\n");
-		// conntrack holds lua state. must clear it before lua shoudown
-		ConntrackPoolDestroy(&params.conntrack);
+		lua_cleanup(params.L);
 		lua_close(params.L);
 		params.L=NULL;
 	}
@@ -3396,6 +3423,8 @@ static void lua_init_functions(void)
 static void lua_init_mt()
 {
 	lua_mt_init_zstream(params.L);
+	lua_mt_init_desync_ctx(params.L);
+	lua_desync_ctx_create(params.L);
 }
 
 bool lua_init(void)
@@ -3403,6 +3432,9 @@ bool lua_init(void)
 	DLOG("\nLUA INIT\n");
 
 	if (!lua_basic_init()) return false;
+
+	LUA_STACK_GUARD_ENTER(params.L)
+
 	lua_sec_harden();
 	lua_init_blobs();
 	lua_init_const();
@@ -3411,10 +3443,11 @@ bool lua_init(void)
 	if (!lua_init_scripts()) goto err;
 	if (!lua_desync_functions_exist()) goto err;
 
+	LUA_STACK_GUARD_LEAVE(params.L,0)
 	DLOG("LUA INIT DONE\n\n");
-
 	return true;
 err:
+	LUA_STACK_GUARD_LEAVE(params.L,0)
 	lua_shutdown();
 	return false;
 }

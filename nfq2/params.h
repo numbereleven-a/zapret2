@@ -115,6 +115,16 @@ void dp_clear(struct desync_profile *dp);
 #define WINDIVERT_MAX 65536
 #define WINDIVERT_PORTFILTER_MAX 4096
 
+typedef struct {
+	unsigned int func_n;
+	const char *func, *instance;
+	const struct desync_profile *dp;
+	const struct dissect *dis;
+	t_ctrack *ctrack;
+	bool incoming, cancel;
+	bool valid;
+} t_lua_desync_context;
+
 struct params_s
 {
 #if !defined( __OpenBSD__) && !defined(__ANDROID__)
@@ -182,6 +192,8 @@ struct params_s
 	char writeable_dir[PATH_MAX];
 
 	int lua_gc;
+	int ref_desync_ctx; // desync ctx userdata registry ref
+	t_lua_desync_context *desync_ctx; // desync ctx single object
 	lua_State *L;
 };
 

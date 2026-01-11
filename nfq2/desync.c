@@ -753,7 +753,6 @@ static uint8_t desync(
 	struct func_list *func;
 	int ref_arg = LUA_NOREF, status;
 	bool b, b_cutoff_all, b_unwanted_payload;
-	t_lua_desync_context ctx = { .magic = 0, .dp = dp, .ctrack = ctrack, .dis = dis, .cancel = false, .incoming = bIncoming };
 	const char *sDirection = bIncoming ? "in" : "out";
 	struct packet_range *range;
 	size_t l;
@@ -782,13 +781,19 @@ static uint8_t desync(
 
 	if (LIST_FIRST(&dp->lua_desync))
 	{
+		params.desync_ctx->dp = dp;
+		params.desync_ctx->ctrack = ctrack;
+		params.desync_ctx->dis = dis;
+		params.desync_ctx->cancel = false;
+		params.desync_ctx->incoming = bIncoming;
+
 		b_cutoff_all = b_unwanted_payload = true;
-		ctx.func_n = 1;
+		params.desync_ctx->func_n = 1;
 		LIST_FOREACH(func, &dp->lua_desync, next)
 		{
-			ctx.func = func->func;
-			desync_instance(func->func, dp->n, ctx.func_n, instance, sizeof(instance));
-			ctx.instance = instance;
+			params.desync_ctx->func = func->func;
+			desync_instance(func->func, dp->n, params.desync_ctx->func_n, instance, sizeof(instance));
+			params.desync_ctx->instance = instance;
 			range = bIncoming ? &func->range_in : &func->range_out;
 
 			if (b_unwanted_payload)
@@ -796,7 +801,7 @@ static uint8_t desync(
 
 			if (b_cutoff_all)
 			{
-				if (lua_instance_cutoff_check(params.L, &ctx, bIncoming))
+				if (lua_instance_cutoff_check(params.L, params.desync_ctx, bIncoming))
 					DLOG("* lua '%s' : voluntary cutoff\n", instance);
 				else if (check_pos_cutoff(pos, range))
 				{
@@ -814,7 +819,7 @@ static uint8_t desync(
 				else
 					b_cutoff_all = false;
 			}
-			ctx.func_n++;
+			params.desync_ctx->func_n++;
 		}
 		if (b_cutoff_all)
 		{
@@ -867,14 +872,14 @@ static uint8_t desync(
 			}
 			ref_arg = luaL_ref(params.L, LUA_REGISTRYINDEX);
 
-			ctx.func_n = 1;
+			params.desync_ctx->func_n = 1;
 			LIST_FOREACH(func, &dp->lua_desync, next)
 			{
-				ctx.func = func->func;
-				desync_instance(func->func, dp->n, ctx.func_n, instance, sizeof(instance));
-				ctx.instance = instance;
+				params.desync_ctx->func = func->func;
+				desync_instance(func->func, dp->n, params.desync_ctx->func_n, instance, sizeof(instance));
+				params.desync_ctx->instance = instance;
 
-				if (!lua_instance_cutoff_check(params.L, &ctx, bIncoming))
+				if (!lua_instance_cutoff_check(params.L, params.desync_ctx, bIncoming))
 				{
 					range = bIncoming ? &func->range_in : &func->range_out;
 					if (check_pos_range(pos, range))
@@ -897,19 +902,16 @@ static uint8_t desync(
 								DLOG_ERR("desync function '%s' does not exist\n", func->func);
 								goto err;
 							}
-							lua_pushlightuserdata(params.L, &ctx);
+							lua_rawgeti(params.L, LUA_REGISTRYINDEX, params.ref_desync_ctx);
 							lua_rawgeti(params.L, LUA_REGISTRYINDEX, ref_arg);
 							lua_pushf_args(params.L, &func->args, -1, true);
 							lua_pushf_str(params.L, "func", func->func);
-							lua_pushf_int(params.L, "func_n", ctx.func_n);
+							lua_pushf_int(params.L, "func_n", params.desync_ctx->func_n);
 							lua_pushf_str(params.L, "func_instance", instance);
-
-							// lua should not store and access ctx outside of this call
-							// if this happens make our best to prevent access to bad memory
-							// this is not crash-proof but better than nothing
-							ctx.magic = MAGIC_CTX; // mark struct as valid
+							// prevent use of desync ctx object outside of function call
+							params.desync_ctx->valid = true;
 							status = lua_pcall(params.L, 2, LUA_MULTRET, 0);
-							ctx.magic = 0; // mark struct as invalid
+							params.desync_ctx->valid = false;
 
 							if (status)
 							{
@@ -939,8 +941,8 @@ static uint8_t desync(
 							range->upper_cutoff ? '<' : '-',
 							range->to.mode, range->to.pos);
 				}
-				if (ctx.cancel) break;
-				ctx.func_n++;
+				if (params.desync_ctx->cancel) break;
+				params.desync_ctx->func_n++;
 			}
 		}
 
