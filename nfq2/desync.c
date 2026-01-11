@@ -913,6 +913,7 @@ static uint8_t desync(
 							lua_pushf_str(params.L, "func", func->func);
 							lua_pushf_int(params.L, "func_n", ctx->func_n);
 							lua_pushf_str(params.L, "func_instance", instance);
+
 							// prevent use of desync ctx object outside of function call
 							ctx->valid = true;
 							status = lua_pcall(params.L, 2, LUA_MULTRET, 0);
