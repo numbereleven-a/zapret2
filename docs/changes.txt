@@ -177,3 +177,4 @@ v0.8.1
 * nfqws2: move ctx from lightuserdata to userdata. prevents crashes on specific ARM cpus
 * nfqws2: alternative representation of payload filter in execution_plan item
 * nfqws2: --payload-disable
+* nfqws2: gracefully shutdown on SIGINT and SIGTERM

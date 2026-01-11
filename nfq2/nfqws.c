@@ -52,9 +52,7 @@
 
 struct params_s params;
 static volatile sig_atomic_t bReload = false;
-#ifdef __CYGWIN__
 bool bQuit = false;
-#endif
 
 static void onhup(int sig)
 {
@@ -102,12 +100,37 @@ static void onusr2(int sig)
 	ipcachePrint(&params.ipcache);
 	printf("\n");
 }
+static void onint(int sig)
+{
+	const char *msg = "INT received !\n";
+	size_t wr = write(1, msg, strlen(msg));
+	bQuit = true;
+}
+static void onterm(int sig)
+{
+	const char *msg = "TERM received !\n";
+	size_t wr = write(1, msg, strlen(msg));
+	bQuit = true;
+}
 
 static void pre_desync(void)
 {
-	signal(SIGHUP, onhup);
-	signal(SIGUSR1, onusr1);
-	signal(SIGUSR2, onusr2);
+	struct sigaction sa;
+
+	sigemptyset(&sa.sa_mask);
+	sa.sa_sigaction = NULL;
+	sa.sa_flags = 0;
+
+	sa.sa_handler = onhup;
+	sigaction(SIGHUP, &sa, NULL);
+	sa.sa_handler = onusr1;
+	sigaction(SIGUSR1, &sa, NULL);
+	sa.sa_handler = onusr2;
+	sigaction(SIGUSR2, &sa, NULL);
+	sa.sa_handler = onint;
+	sigaction(SIGINT, &sa, NULL);
+	sa.sa_handler = onterm;
+	sigaction(SIGTERM, &sa, NULL);
 }
 
 
@@ -364,6 +387,15 @@ static int nfq_main(void)
 			else
 				DLOG("recv from nfq returned 0 !\n");
 		}
+		if (errno==EINTR)
+		{
+			if (bQuit)
+			{
+				DLOG_CONDUP("quit requested\n");
+				goto exok;
+			}
+			continue;
+		}
 		e = errno;
 		DLOG_ERR("recv: recv=%zd errno %d\n", rd, e);
 		errno = e;
@@ -371,6 +403,7 @@ static int nfq_main(void)
 		// do not fail on ENOBUFS
 	} while (e == ENOBUFS);
 
+exok:
 	res=0;
 ex:
 	nfq_deinit(&h, &qh);
@@ -487,6 +520,11 @@ static int dvt_main(void)
 		{
 			if (errno == EINTR)
 			{
+				if (bQuit)
+				{
+					DLOG_CONDUP("quit requested\n");
+					goto exitok;
+				}
 				// a signal received
 				continue;
 			}
@@ -567,6 +605,7 @@ static int dvt_main(void)
 		}
 	}
 
+exitok:
 	res = 0;
 exiterr:
 	if (Fpid) fclose(Fpid);
