@@ -985,6 +985,10 @@ bool IsQUICCryptoHello(const uint8_t *data, size_t len, size_t *hello_offset, si
 	return true;
 }
 
+static bool is_quic_v2(uint32_t version)
+{
+    return (version == 0x709A50C4) || (version == 0x6b3343cf);
+}
 /* Returns the QUIC draft version or 0 if not applicable. */
 uint8_t QUICDraftVersion(uint32_t version)
 {
@@ -1016,7 +1020,7 @@ uint8_t QUICDraftVersion(uint32_t version)
 		return 34;
 	/* QUIC Version 2 */
 	/* TODO: for the time being use 100 as a number for V2 and let see how v2 drafts evolve */
-	if ((version == 0x709A50C4) || (version == 0x6b3343cf))
+	if (is_quic_v2(version))
 		return 100;
 
 	return 0;
@@ -1025,10 +1029,6 @@ uint8_t QUICDraftVersion(uint32_t version)
 static bool is_quic_draft_max(uint32_t draft_version, uint8_t max_version)
 {
 	return draft_version && draft_version <= max_version;
-}
-static bool is_quic_v2(uint32_t version)
-{
-    return (version == 0x709A50C4) || (version == 0x6b3343cf);
 }
 
 static bool quic_hkdf_expand_label(const uint8_t *secret, uint8_t secret_len, const char *label, uint8_t *out, size_t out_len)
