@@ -263,7 +263,10 @@
     - [openrc integration principles](#openrc-integration-principles)
     - [openrc cheat sheet](#openrc-cheat-sheet)
   - [Alternative installation on systemd](#alternative-installation-on-systemd)
-  - [Other firmwares](#other-firmwares)
+- [Other firmwares](#other-firmwares)
+- [Windows](#windows)
+  - [Windows 7](#windows-7)
+  - [Windows Server](#windows-server)
 
 
 # Introduction
@@ -5052,7 +5055,7 @@ On classic Linux distributions with systemd, you can use the provided template u
 
 This method does not apply ip/nf tables rules - you will have to handle that separately, as well as write the rules themselves. The rules must be placed somewhere so they are applied after the system starts. For example, you can create a separate systemd unit that runs a shell script or `nft -f /path/to/file.nft`.
 
-## Other firmwares
+# Other firmwares
 
 For static binaries, the host environment doesn't matter: PC, Android, set-top box, router, or any other device. Any firmware or Linux distribution will work; static binaries run on everything. They only require a kernel with the necessary build options or modules. However, in addition to binaries, the project uses scripts that rely on certain standard utilities.
 
@@ -5096,3 +5099,40 @@ It was chosen for this project based on the following characteristics:
 * All `iptables` modules are available in the repository and can be installed via `opkg`.
 * The repository contains a vast number of standard programs and additional software.
 * The availability of an SDK, allowing you to compile any missing components.
+
+
+# Windows
+
+zapret was initially written for unix. It uses unix emulation layer cygwin on Windows to help migration.
+
+If winws2 is run standalone cygwin1.dll is required in it's directory. If winws2 is run inside cygwin environment - cygwin1.dll must NOT be present in it's directory or it won't run.
+
+cygwin emulate shared PID namespaces and deliver signals only within one cygwin1.dll instance !
+To send singnals signal sending program (kill, killall) must be run with the same cygwin1.dll as winws2.
+
+It's possible to install cygwin and use winws2 inside cygwin installation.
+But it may be more comfortable to use [zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle) which includes minimal cygwin.
+cygwin prompt is pre-configured with aliases for blockcheck, blockcheck2, winws, winws2, winws2 with standard Lua scripts.
+
+## Windows 7
+
+Requirements for windows driver signing have changed in 2021.
+Official free updates of windows 7 ended in 2020.
+After 2020 for the years paid updates were available (ESU).
+One of the updates from ESU enables signatures used in windivert 2.2.2-A.
+There are several options :
+
+1. Take `windivert64.sys` and `windivert.dll` version `2.2.0-C` or `2.2.0-D` from [here](https://reqrypt.org/download) and replace existing files.
+
+2. [Hack ESU](https://hackandpwn.com/windows-7-esu-patching)
+
+3. Use "BypassESU" patcher. Google it by name.
+
+4. Use `UpdatePack7R2` from simplix : https://blog.simplix.info
+If you are in Russia or Belarus temporary change region in Control Panel.
+
+## Windows Server
+
+winws is linked against wlanapi.dll which is absent by default.
+To solve this problem run power shell as administrator and execute command `Install-WindowsFeature -Name Wireless-Networking`.
+Then reboot the system.
