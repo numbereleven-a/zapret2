@@ -2013,6 +2013,8 @@ static uint8_t dpi_desync_packet_play(
 	struct dissect dis;
 	uint8_t verdict = VERDICT_PASS;
 
+	// NOTE ! OS can pass wrong checksum to queue. cannot rely on it !
+
 	proto_dissect_l3l4(data_pkt, len_pkt, &dis);
 	if (!!dis.ip != !!dis.ip6)
 	{
@@ -2023,7 +2025,8 @@ static uint8_t dpi_desync_packet_play(
 			if (dis.tcp)
 			{
 				verdict = dpi_desync_tcp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
-				// fix csum if unmodified and if OS can pass wrong csum to queue
+				// fix csum if unmodified and if OS can pass wrong csum to queue (depends on OS)
+				// modified means we have already fixed the checksum or made it invalid intentionally
 				verdict_tcp_csum_fix(verdict, (struct tcphdr *)dis.tcp, dis.transport_len, dis.ip, dis.ip6);
 			}
 			break;
@@ -2031,7 +2034,8 @@ static uint8_t dpi_desync_packet_play(
 			if (dis.udp)
 			{
 				verdict = dpi_desync_udp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
-				// fix csum if unmodified and if OS can pass wrong csum to queue
+				// fix csum if unmodified and if OS can pass wrong csum to queue (depends on OS)
+				// modified means we have already fixed the checksum or made it invalid intentionally
 				verdict_udp_csum_fix(verdict, (struct udphdr *)dis.udp, dis.transport_len, dis.ip, dis.ip6);
 			}
 			break;
@@ -2041,6 +2045,8 @@ static uint8_t dpi_desync_packet_play(
 }
 uint8_t dpi_desync_packet(uint32_t fwmark, const char *ifin, const char *ifout, const uint8_t *data_pkt, size_t len_pkt, uint8_t *mod_pkt, size_t *len_mod_pkt)
 {
+	// NOTE ! OS can pass wrong checksum to queue. cannot rely on it !
+
 	ipcachePurgeRateLimited(&params.ipcache, params.ipcache_lifetime);
 	return dpi_desync_packet_play(0, 0, 0, fwmark, ifin, ifout, NULL, data_pkt, len_pkt, mod_pkt, len_mod_pkt);
 }
