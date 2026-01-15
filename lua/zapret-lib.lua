@@ -1170,9 +1170,9 @@ function replay_drop_set(desync, v)
 		if v == nil then v=true end
 		local rdk = replay_drop_key(desync)
 		if v then
-			if desync.replay then desync.track.lua_state[replay_drop_key] = true end
+			if desync.replay then desync.track.lua_state[rdk] = true end
 		else
-			desync.track.lua_state[replay_drop_key] = nil
+			desync.track.lua_state[rdk] = nil
 		end
 	end
 end
@@ -1180,7 +1180,7 @@ end
 -- return true if the caller should return VERDICT_DROP
 function replay_drop(desync)
 	if desync.track then
-		local drop = desync.replay and desync.track.lua_state[replay_drop_key]
+		local drop = desync.replay and desync.track.lua_state[replay_drop_key(desync)]
 		if not desync.replay or desync.replay_piece_last then
 			-- replay stopped or last piece of reasm
 			replay_drop_set(desync, false)
@@ -1557,7 +1557,7 @@ function http_dissect_header(header)
 end
 -- make table with structured http header representation
 function http_dissect_headers(http, pos)
-	local eol,pnext,header,value,idx,headers,pos_endheader,pos_startvalue,pos_headers_next
+	local eol,pnext,header,value,idx,headers,pos_endheader,pos_startvalue,pos_headers_end
 	headers={}
 	while pos do
 		eol,pnext = find_next_line(http,pos)
@@ -1616,9 +1616,10 @@ function http_dissect_reply(http)
 	s = string.sub(http,1,8)
 	if s~="HTTP/1.1" and s~="HTTP/1.0" then return nil end
 	pos = string.find(http,"[ \t\r\n]",10)
+	if not pos then return nil end
 	code = tonumber(string.sub(http,10,pos-1))
 	if not code then return nil end
-	pos = find_next_line(http,pos)
+	s,pos = find_next_line(http,pos)
 	local hdis = { code = code }
 	hdis.headers, hdis.pos_headers_end = http_dissect_headers(http,pos)
 	if hdis.pos_headers_end then

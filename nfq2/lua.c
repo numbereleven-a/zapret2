@@ -465,6 +465,7 @@ static int luacall_brandom_az09(lua_State *L)
 
 // hacky function. breaks immutable string behavior.
 // if you change a string, it will change in all variables that hold the same string
+/*
 static int luacall_memcpy(lua_State *L)
 {
 	// memcpy(to,to_offset,from,from_offset,size)
@@ -485,7 +486,7 @@ static int luacall_memcpy(lua_State *L)
 	memcpy(to+off_to,from+off_from,size);
 	return 0;
 }
-
+*/
 
 static int luacall_parse_hex(lua_State *L)
 {
@@ -1183,7 +1184,7 @@ void lua_pushf_tcphdr_options(lua_State *L, const struct tcphdr *tcp, size_t len
 	uint8_t *t = (uint8_t*)(tcp+1);
 	uint8_t *end = (uint8_t*)tcp + (tcp->th_off<<2);
 	uint8_t opt;
-	if ((end-(uint8_t*)tcp) < len) end=(uint8_t*)tcp + len;
+	if ((end-(uint8_t*)tcp) > len) end=(uint8_t*)tcp + len;
 	lua_Integer idx=1;
 	while(t<end)
 	{
@@ -1267,7 +1268,7 @@ void lua_pushf_iphdr(lua_State *L, const struct ip *ip, size_t len)
 	if (ip && len>=sizeof(struct ip))
 	{
 		uint16_t hl = ip->ip_hl<<2;
-		bool b_has_opt = hl>sizeof(struct tcphdr) && hl<=len;
+		bool b_has_opt = hl>sizeof(struct ip) && hl<=len;
 		lua_createtable(L, 0, 11+b_has_opt);
 		lua_pushf_int(L,"ip_v",ip->ip_v);
 		lua_pushf_int(L,"ip_hl",ip->ip_hl);
@@ -1560,7 +1561,7 @@ void lua_pushf_range(lua_State *L, const char *name, const struct packet_range *
 	LUA_STACK_GUARD_ENTER(L)
 
 	lua_pushf_table(L, name);
-	lua_getfield(L, -1, "range");
+	lua_getfield(L, -1, name);
 	lua_pushf_bool(L, "upper_cutoff",range->upper_cutoff);
 	lua_pushf_pos(L, "from", &range->from);
 	lua_pushf_pos(L, "to", &range->to);
@@ -3375,7 +3376,7 @@ static void lua_init_functions(void)
 		{"divint",luacall_divint},
 
 		// hacky function, write to immutable strings
-		{"memcpy",luacall_memcpy},
+		//{"memcpy",luacall_memcpy},
 
 		// random blob generation
 		{"brandom",luacall_brandom},

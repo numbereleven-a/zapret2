@@ -47,7 +47,7 @@ function wgobfs(ctx, desync)
 	if padmin>padmax then
 		error("wgobfs: padmin>padmax")
 	end
-	if desync.l7payload=="wireguard_initiation" or desync.l7payload=="wireguard_response" or desync.l7payload=="wireguard_cookie" and #desync.dis.payload<65506 then
+	if (desync.l7payload=="wireguard_initiation" or desync.l7payload=="wireguard_response" or desync.l7payload=="wireguard_cookie") and #desync.dis.payload<65506 then
 		DLOG("wgobfs: encrypting '"..desync.l7payload.."'. size "..#desync.dis.payload)
 		local key = genkey()
 		-- in aes-gcm every message require it's own crypto secure random iv
