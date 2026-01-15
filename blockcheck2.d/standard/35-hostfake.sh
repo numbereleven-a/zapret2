@@ -37,8 +37,8 @@ pktws_check_hostfake()
 	local ok ttls attls f fooling
 	local PAYLOAD="--payload=$3"
 
-	ttls=$(seq -s ' ' $MIN_TTL $MAX_TTL)
-	attls=$(seq -s ' ' $MIN_AUTOTTL_DELTA $MAX_AUTOTTL_DELTA)
+	[ "$MAX_TTL" = 0 ] || ttls=$(seq -s ' ' $MIN_TTL $MAX_TTL)
+	[ "$MAX_AUTOTTL_DELTA" = 0 ] || attls=$(seq -s ' ' $MIN_AUTOTTL_DELTA $MAX_AUTOTTL_DELTA)
 
 	need_hostfakesplit=0
 	ok=0

@@ -16,8 +16,8 @@ pktws_check_http()
 		fake=fake_default_http
 	fi
 
-	ttls=$(seq -s ' ' $MIN_TTL $MAX_TTL)
-	attls=$(seq -s ' ' $MIN_AUTOTTL_DELTA $MAX_AUTOTTL_DELTA)
+	[ "$MAX_TTL" = 0 ] || ttls=$(seq -s ' ' $MIN_TTL $MAX_TTL)
+	[ "$MAX_AUTOTTL_DELTA" = 0 ] || attls=$(seq -s ' ' $MIN_AUTOTTL_DELTA $MAX_AUTOTTL_DELTA)
 
 	# do not test fake + multisplit if multisplit works
 	[ "$need_multisplit" = 0 -a "$SCANLEVEL" != force ] || splitfs=multisplit
