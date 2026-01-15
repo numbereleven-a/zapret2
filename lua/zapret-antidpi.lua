@@ -1080,7 +1080,7 @@ function oob(ctx, desync)
 			local data = desync.reasm_data or desync.dis.payload
 			if not desync.arg.drop_ack and #data==0  then
 				DLOG("oob: sending empty ACK")
-				if not rawsend_dissect(desync.dis) then	return end
+				if not rawsend_dissect(desync.dis,rawsend_opts_base(desync)) then return end
 			end
 			if #data>0 then
 				local oob = desync.arg.char or (desync.arg.byte and bu8(desync.arg.byte) or nil) or "\x00"
@@ -1107,7 +1107,7 @@ function oob(ctx, desync)
 				dis_oob.payload = string.sub(data, 1, urp-1) .. oob .. string.sub(data, urp)
 				dis_oob.tcp.th_flags = bitor(dis_oob.tcp.th_flags, TH_URG)
 				DLOG("oob: sending OOB")
-				if not rawsend_dissect_segmented(desync, dis_oob, desync.tcp_mss, desync_opts(desync)) then
+				if not rawsend_dissect_segmented(desync, dis_oob) then
 					instance_cutoff_shim(ctx, desync)
 					return
 				end

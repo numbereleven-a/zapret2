@@ -1069,10 +1069,13 @@ end
 
 -- send dissect with tcp segmentation based on mss value. appply specified rawsend options.
 function rawsend_dissect_segmented(desync, dis, mss, options)
+	dis = dis or desync.dis
 	local discopy = deepcopy(dis)
+	options = options or desync_opts(desync)
 	apply_fooling(desync, discopy, options and options.fooling)
 
 	if dis.tcp then
+		mss = mss or desync.tcp_mss
 		local extra_len = l3l4_extra_len(discopy)
 		if extra_len >= mss then return false end
 		local max_data = mss - extra_len
@@ -1114,13 +1117,13 @@ end
 
 -- send specified payload based on existing L3/L4 headers in the dissect. add seq to tcp.th_seq.
 function rawsend_payload_segmented(desync, payload, seq, options)
-	options = options or desync_opts(desync)
-	local dis = deepcopy(desync.dis)
+	-- save some cpu and ram
+	local dis = (payload or seq and seq~=0) and deepcopy(desync.dis) or desync.dis
 	if payload then dis.payload = payload end
 	if dis.tcp and seq then
 		dis.tcp.th_seq = dis.tcp.th_seq + seq
 	end
-	return rawsend_dissect_segmented(desync, dis, desync.tcp_mss, options)
+	return rawsend_dissect_segmented(desync, dis, nil, options)
 end
 
 
