@@ -1087,7 +1087,7 @@ function oob(ctx, desync)
 				end
 			else
 				local oob = desync.arg.char or (desync.arg.byte and bu8(desync.arg.byte) or nil) or "\x00"
-				if #oob>1 then
+				if #oob~=1 then
 					error("oob: OOB must be exactly one byte")
 				end
 				local dis_oob = deepcopy(desync.dis)
