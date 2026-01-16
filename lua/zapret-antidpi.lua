@@ -1056,6 +1056,7 @@ end
 
 -- nfqws1 : not available
 -- tpws : close analog is "--split-pos=.. --oob" but works not the same way
+-- standard args : fooling, ip_id, rawsend, reconstruct, ipfrag
 -- arg : char - oob char
 -- arg : byte - oob byte
 -- arg : drop_ack - drop original first ACK packet

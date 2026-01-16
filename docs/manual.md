@@ -3998,6 +3998,14 @@ function tcpseg(ctx, desync)
 function oob(ctx, desync)
 ```
 
+-- standard args : fooling, ip_id, rawsend, reconstruct, ipfrag
+
+
+- arg: [standard fooling](#standard-fooling)
+- arg: [standard ipid](#standard-ipid)
+- arg: [standard ipfrag](#standard-ipfrag)
+- arg: [standard reconstruct](#standard-reconstruct)
+- arg: [standard rawsend](#standard-rawsend)
 - arg: char - 1 символ oob
 - arg: byte - числовое значение байта OOB 0..255
 - arg: drop_ack - дропать пустой ACK в ответ на SYN,ACK
@@ -4012,7 +4020,7 @@ function oob(ctx, desync)
 более новый - на следующий за ним байт. Поэтому значение th_urp=0 невалидно по новому стандарту, но все еще может работать.
 Чтобы задействовать его укажите "urp=b".
 - "urp=e" вставляет OOB байт после самого последнего байта пейлоада - для обхода DPI как правило бесполезно, поскольку DPI получает все оригинальное сообщение.
-- Требуется перенаправление входящего трафика в пределах `--in-range=-s1'
+- Требуется перенаправление входящего трафика в пределах `--in-range=-s1`
 - Не может быть отфильтровано по пейлоаду, поскольку после начала модификации tcp handshake соскок уже невозможен, иначе поедут sequence.
 - Фильтрация по хостлистам возможна только при `--ipcache-hostname`.
 - Не может работать с функциями, предполагающими отправку пейлоада - multisplit, multidisorder, fakedsplit, fakeddisorder и тд. Они будут работать, но будут слать дубль без OOB.
