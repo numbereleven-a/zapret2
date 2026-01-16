@@ -1056,8 +1056,8 @@ end
 
 -- nfqws1 : not available
 -- tpws : close analog is "--split-pos=.. --oob" but works not the same way
--- arg : char=c - oob char
--- arg : byte=c - oob byte
+-- arg : char - oob char
+-- arg : byte - oob byte
 -- arg : drop_ack - drop original first ACK packet
 -- arg : urp - urgent pointer position marker, 'b' or 'e'. default - 0
 function oob(ctx, desync)

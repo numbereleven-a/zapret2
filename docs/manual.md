@@ -3998,8 +3998,8 @@ function tcpseg(ctx, desync)
 function oob(ctx, desync)
 ```
 
-- arg: char=c - 1 символ oob
-- arg: byte=c - числовое значение байта OOB 0..255
+- arg: char - 1 символ oob
+- arg: byte - числовое значение байта OOB 0..255
 - arg: drop_ack - дропать пустой ACK в ответ на SYN,ACK
 - arg: urp - позиционный [маркер](#маркеры) для urgent pointer, "b" или "e". по умолчанию - "b"
 
