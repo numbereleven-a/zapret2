@@ -3825,9 +3825,10 @@ After it's done it executes [instance cutoff](#instance_cutoff).
 
 Target OS throws away OOB byte from the stream but DPI may analyze message with OOB byte as it's part thus breaking the message.
 
-- OOB is obsolete but still supported in most OS. There are two RFCs. The older one assumes that th_urp points to the OOB byte,
-the newer one to the next byte. Therefore, the value th_urp=0 is invalid according to the new standard, but it can still work.
+- OOB is obsolete but still supported in most OS. There are two RFCs. One assumes that th_urp points to the OOB byte,
+another one - to the next byte. Therefore, the value th_urp=0 is invalid according to one of the standards, but it can still work.
 To enable it, specify "urp=b".
+- Marker "urp" defines 0-based position of the OOB byte. Resulting th_urp , except the "b" case, is set incremented by 1. This is what most of the modern OS expect.
 - "urp=e" inserts an OOB byte after the very last byte of the payload - generally useless for DPI bypass, since DPI gets the entire original message.
 - For protocols in which the server initially waits for a client request, `--in-range=-s1` is enough. In Windows `--wf-tcp-in` is not needed. Automatically intercepted incoming packets with the SYN flag are sufficient.
 - For protocols in which the server sends data before the first message from client all incoming packets before that message should be intercepted. In Windows `--wf-tcp-in` is required.
