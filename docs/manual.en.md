@@ -1313,7 +1313,7 @@ desync
 | l7payload | string | [payload type](#protocol-detection) of the current packet or packet group | defaults to "unknown" if undetermined |
 | l7proto   | string | [flow protocol](#protocol-detection) | defaults to "unknown" if undetermined |
 | reasm_data         | string | result of reassembling a multi-packet message, or the payload itself if no reassembly occurred | currently applied only to TCP                             |
-| reasm_offset       | string | offset of the current replayed packet within the reassembled data                            | currently applied only to TCP                             |
+| reasm_offset       | number | offset of the current replayed packet within the reassembled data                            | currently applied only to TCP                             |
 | decrypt_data       | string | result of reassembling and decrypting the payload or payloads of multiple packets            | used for QUIC                                             |
 | tcp_mss            | number | MSS of the remote end of the TCP connection                                                  | always present, only for TCP                              |
 | track              | table  | data bound to the conntrack entry                                                            | only if conntrack is present; may be absent               |
