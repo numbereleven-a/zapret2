@@ -759,6 +759,7 @@ LUA DESYNC ACTION:
  --wf-raw-part=<filter>|@<filename>     ; windivert конструктор : частичный windivert raw фильтр. обьединяется по принципу ИЛИ.
  --wf-filter-lan=0|1                    ; windivert конструктор : отфильтровывать неглобальные IP адреса. по умолчанию - да.
  --wf-raw=<filter>|@<filename>          ; полный windivert фильтр. замещает конструктор.
+ --wf-dup-check[=0|1]                   ; управление проверкой на повторный запуск с теми же параметрами фильтра --wf ( по умолчанию 1 )
  --wf-save=<filename>                   ; сохранить полный итоговый windivert фильтр в файл
 LOGICAL NETWORK FILTER:
  --ssid-filter=ssid1[,ssid2,ssid3,...]  ; список сетей wifi, при наличии подключения к которым перехват включается, а иначе не включается.
