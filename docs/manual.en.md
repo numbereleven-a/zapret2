@@ -3834,7 +3834,7 @@ To enable it, specify "urp=b".
 - For protocols in which the server initially waits for a client request, `--in-range=-s1` is enough. In Windows `--wf-tcp-in` is not needed. Automatically intercepted incoming packets with the SYN flag are sufficient.
 - For protocols in which the server sends data before the first message from client all incoming packets before that message should be intercepted. In Windows `--wf-tcp-in` is required.
 - Cannot be filtered by payload because after the start it's not possible to stop and not to insert the byte. Inserting a byte without OOB breaks the data.
-- Hostlist filtering is only possible with `--ipcache-hostname`.
+- Hostlist filtering is not possible.
 - oob is "lasting" desync. If profile switch occurs before oob is finished it must be duplicated to that profile or TCP will break because of sequence desync.
 - Can't work with functions that resend modified payload. multisplit, multidisorder, fakedsplit, fakeddisorder, etc will send duplicates without OOB.
 - If the payload is [multi-segment](#handling-multi-packet-payloads), the entire [reasm](#handling-multi-packet-payloads) is sent. OOB is inserted into the segment where urp hits.
