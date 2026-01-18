@@ -268,6 +268,7 @@
 - [Windows](#windows)
   - [Windows 7](#windows-7)
   - [Windows Server](#windows-server)
+  - [Windows ARM64](#windows-arm64)
 
 
 # Introduction
@@ -3835,9 +3836,8 @@ To enable it, specify "urp=b".
 - For protocols in which the server initially waits for a client request, `--in-range=-s1` is enough. In Windows `--wf-tcp-in` is not needed. Automatically intercepted incoming packets with the SYN flag are sufficient.
 - For protocols in which the server sends data before the first message from client all incoming packets before that message should be intercepted. In Windows `--wf-tcp-in` is required.
 - Cannot be filtered by payload because after the start it's not possible to stop and not to insert the byte. Inserting a byte without OOB breaks the data.
+- Hostlist filtering is not possible.
 - oob is "lasting" desync. If profile switch occurs before oob is finished it must be duplicated to that profile or TCP will break because of sequence desync.
-- If this function is called for the first time not from the very beginning of the tcp connection it [cuts off](#instance_cutoff) immediately.
-- Hostlist filtering is possible only with '--ipcache-hostname'.
 - Can't work with functions that resend modified payload. multisplit, multidisorder, fakedsplit, fakeddisorder, etc will send duplicates without OOB.
 - If the payload is [multi-segment](#handling-multi-packet-payloads), the entire [reasm](#handling-multi-packet-payloads) is sent. OOB is inserted into the segment where urp hits.
 In this segment the th_urp is normalized by segment offset, the TH_URG flag is set. The rest of the parts are sent as is. The function drops the whole replay then [cuts itself off](#instance_cutoff).
@@ -5182,3 +5182,16 @@ There are several options :
 winws2 is linked against wlanapi.dll which is absent by default.
 To solve this problem run power shell as administrator and execute command `Install-WindowsFeature -Name Wireless-Networking`.
 Then reboot the system.
+
+## Windows ARM64
+
+The main problem is lack of a signed windivert driver. Therefore, it is required to enable the test signature mode: 'bcdedit/set {current} testsigning on'.
+There's unsigned WinDivert64.sys driver in [zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle).
+There is also cmd file for rolling the driver to the arm64 Win11.
+
+Another problem is lack of cygwin for non-x86 platforms. However, win11 has x64 emulation, so you can use the x64 build, but with replaced WinDivert64.sys driver.
+There is no need to replace WinDivert.dll - only WinDivert64.sys needs to be replaced. It's verified and confirmed working.
+
+There is no x64 emulation on win10 arm64, but there is x86 32-bit emulation.
+Therefore, theorecically you can use the win32 variant and put the WinDivert64.sys driver for arm64 to the same dir.
+This hasn't been verified.
