@@ -742,7 +742,7 @@ ipt_aux_scheme()
 	# $3 - port
 
 	# to avoid possible INVALID state drop
-	[ "$2" = tcp ] && IPT_ADD_DEL $1 INPUT -p $2 --sport $3 ! $IPT_COMMENT --syn -j ACCEPT
+	[ "$2" = tcp ] && IPT_ADD_DEL $1 INPUT -p $2 --sport $3 ! --syn $IPT_COMMENT -j ACCEPT
 
 	local icmp_filter="-p icmp -m icmp --icmp-type"
 	[ "$IPV" = 6 ] && icmp_filter="-p icmpv6 -m icmp6 --icmpv6-type"
