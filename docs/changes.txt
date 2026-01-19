@@ -199,3 +199,4 @@ v0.8.1
 0.8.7
 
 * nfqws2: removed hard check for host: presence in http_req
+* nfqws2: file open test before destroying in-memory content of ipset/hostlist
