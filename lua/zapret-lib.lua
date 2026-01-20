@@ -1473,7 +1473,7 @@ function gunzip_file(filename, expected_ratio, read_block_size)
 	if not expected_ratio then expected_ratio=4 end
 
 	local decompressed=""
-	gz = gunzip_init()
+	local gz = gunzip_init()
 	if not gz then
 		error("gunzip_file: stream init error")
 	end
@@ -1512,7 +1512,7 @@ function gzip_file(filename, data, expected_ratio, level, memlevel, compress_blo
 	if not compress_block_size then compress_block_size=16384 end
 	if not expected_ratio then expected_ratio=2 end
 
-	gz = gzip_init(nil, level, memlevel)
+	local gz = gzip_init(nil, level, memlevel)
 	if not gz then
 		error("gzip_file: stream init error")
 	end
