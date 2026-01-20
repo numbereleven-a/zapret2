@@ -72,7 +72,7 @@ ifeq ($(LUA_LIB),)
 
 # no success with luajit
 
-LUA_VER?=5.4
+LUA_VER?=5.5
 LUA_VER_UNDOTTED:=$(shell echo $(LUA_VER) | sed 's/\.//g')
 
 LUA_CFL :=
@@ -89,7 +89,7 @@ endif
 ifeq ($(LUA_CFLAGS),)
  LUA_CFLAGS := $(shell $(PKG_CONFIG) --cflags $(LUA_PKG) 2>/dev/null)
  ifeq ($(LUA_CFLAGS),)
-  LUA_CFLAGS := -I/usr/local/include/lua$(LUA_VER) -I/usr/local/include/lua-$(LUA_VER) -I/usr/include/lua$(LUA_VER) -I/usr/include/lua-$(LUA_VER)
+  LUA_CFLAGS := -I/usr/local/include/lua$(LUA_VER) -I/usr/local/include/lua-$(LUA_VER) -I/usr/include/lua$(LUA_VER) -I/usr/include/lua-$(LUA_VER) -I/usr/local/include/lua -I/usr/local/include
  endif
 endif
 ifeq ($(LUA_LIB),)

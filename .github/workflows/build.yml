@@ -93,8 +93,8 @@ jobs:
           CFLAGS: ${{ matrix.env.CFLAGS != '' && matrix.env.CFLAGS || null }}
           LDFLAGS: ${{ matrix.env.LDFLAGS != '' && matrix.env.LDFLAGS || null }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LUA_VER: 5.4
-          LUA_RELEASE: 5.4.8
+          LUA_VER: 5.5
+          LUA_RELEASE: 5.5.0
           LUAJIT_VER: 2.1
           LUAJIT_RELEASE: 2.1-20250826
           LUAJIT_LUAVER: 5.1

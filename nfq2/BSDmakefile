@@ -15,7 +15,7 @@ LUA_PKG:=luajit
 
 .else
 
-LUA_VER ?= 5.4
+LUA_VER ?= 5.5
 LUA_VER_UNDOTTED!= echo $(LUA_VER) | sed 's/\.//g'
 
 OSNAME!=uname
