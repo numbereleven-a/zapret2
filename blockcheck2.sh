@@ -951,7 +951,8 @@ pktws_start()
 			;;
 		CYGWIN)
 			# allow multiple PKTWS instances with the same wf filter but different ipset
-			"$WINWS2" --wf-dup-check=0 $WF --ipset="$IPSET_FILE" --lua-init=@"$ZAPRET_BASE/lua/zapret-lib.lua" --lua-init=@"$ZAPRET_BASE/lua/zapret-antidpi.lua" "$@" >/dev/null &
+			# some methods require empty acks
+			"$WINWS2" --wf-dup-check=0 --wf-tcp-empty=1 $WF --ipset="$IPSET_FILE" --lua-init=@"$ZAPRET_BASE/lua/zapret-lib.lua" --lua-init=@"$ZAPRET_BASE/lua/zapret-antidpi.lua" "$@" >/dev/null &
 			;;
 	esac
 	PID=$!
