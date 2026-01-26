@@ -49,7 +49,7 @@ bool l7_proto_match(t_l7proto l7proto, uint64_t filter_l7)
 
 static const char *l7payload_name[] = {
  "all","unknown","empty","known",
- "ipv4","ipv6",
+ "ipv4","ipv6","icmp",
  "http_req","http_reply",
  "tls_client_hello","tls_server_hello",
  "dtls_client_hello","dtls_server_hello",

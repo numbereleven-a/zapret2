@@ -1906,7 +1906,7 @@ static uint8_t dpi_desync_icmp_packet(
 	struct sockaddr_storage src, dst;
 	const char *ssid = NULL;
 	struct desync_profile *dp = NULL;
-	t_l7payload l7payload = L7P_UNKNOWN;
+	t_l7payload l7payload = L7P_ICMP;
 	t_ctrack *ctrack = NULL;
 	bool bReverse, bReverseFixed;
 
@@ -1979,7 +1979,6 @@ static uint8_t dpi_desync_icmp_packet(
 		const char *hostname = NULL;
 		if (ctrack && ctrack->hostname)
 		{
-printf("ZZZZZz4 %p\n",ctrack->hostname);
 			hostname = ctrack->hostname;
 			hostname_is_ip = ctrack->hostname_is_ip;
 		}
