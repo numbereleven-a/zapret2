@@ -24,6 +24,8 @@ function test_crypto(...)
 end
 
 function test_random()
+	print("* random")
+
 	local rnds={}
 	for i=1,20 do
 		local rnd = bcryptorandom(math.random(10,20))
@@ -34,6 +36,8 @@ function test_random()
 end
 
 function test_bop()
+	print("* bop")
+
 	for n,test in ipairs(
 		{
 			{ fb = bxor, fbit = bitxor, nb = "bxor", nbit="bitxor" },
@@ -58,6 +62,8 @@ function test_bop()
 end
 
 function test_hash()
+	print("* hash")
+
 	local hashes={}
 	for i=1,5 do
 		local rnd = brandom(math.random(5,64))
@@ -74,6 +80,8 @@ function test_hash()
 end
 
 function test_hkdf()
+	print("* hkdf")
+
 	local nblob = 2
 	local okms = {}
 	for nsalt=1,nblob do
@@ -110,6 +118,8 @@ function test_hkdf()
 end
 
 function test_aes()
+	print("* aes")
+
 	local clear_text="test "..brandom_az09(11)
 	local iv, key, encrypted, decrypted
 
@@ -147,6 +157,8 @@ function test_aes()
 end
 
 function test_aes_gcm()
+	print("* aes_gcm")
+
 	local authenticated_data = "authenticated message "..brandom_az09(math.random(10,50))
 	local clear_text="test message "..brandom_az09(math.random(10,50))
 	local iv, key, encrypted, atag, decrypted, atag2
@@ -214,6 +226,8 @@ function test_aes_gcm()
 end
 
 function test_aes_ctr()
+	print("* aes_ctr")
+
 	local clear_text="test message "..brandom_az09(math.random(10,50))
 	local iv, key, encrypted, decrypted
 
@@ -277,6 +291,8 @@ function test_aes_ctr()
 end
 
 function test_ub()
+	print("* ub")
+
 	for k,f in pairs({{u8,bu8,0xFF,8}, {u16,bu16,0xFFFF,16}, {u24,bu24,0xFFFFFF,24}, {u32,bu32,0xFFFFFFFF,32}, {u48,bu48,0xFFFFFFFFFFFF,48}}) do
 		local v = math.random(0,f[3])
 		local pos = math.random(1,20)
@@ -288,6 +304,8 @@ function test_ub()
 end
 
 function test_bit()
+	print("* bit")
+
 	local v, v2, v3, v4, b1, b2, pow
 
 	for i=1,100 do
@@ -331,6 +349,8 @@ function test_bit()
 end
 
 function test_swap()
+	print("* swap")
+
 	local v1, v2, v3
 
 	v1 = math.random(0,0xFFFF)
@@ -364,7 +384,10 @@ function test_swap()
 end
 
 function test_ux()
+	print("* ux")
+
 	local v1, v2, v3, usum, sum
+
 	for k,test in pairs({
 		{ add=u8add, fname="u8add", max = 0xFF },
 		{ add=u16add, fname="u16add", max = 0xFFFF },
@@ -393,6 +416,8 @@ function test_bin(...)
 end
 
 function test_gzip()
+	print("* gzip")
+
 	local s=""
 	for i=1,math.random(2000,3000) do
 		local rnd=brandom(math.random(1,50))
@@ -423,6 +448,8 @@ function test_gzip()
 end
 
 function test_ipstr()
+	print("* ipstr")
+
 	local s_ip, ip, s_ip2
 
 	s_ip = string.format("%u.%u.%u.%u", math.random(0,255), math.random(0,255), math.random(0,255), math.random(0,255))
@@ -444,6 +471,8 @@ end
 
 
 function test_dissect()
+	print("* dissect")
+
 	local dis, raw1, raw2
 
 	for i=1,20 do
@@ -597,6 +626,8 @@ function test_dissect()
 end
 
 function test_csum()
+	print("* csum")
+
 	local payload = brandom(math.random(10,20))
 	local ip4b, ip6b, raw, tcpb, udpb, icmpb, dis1, dis2
 	local ip = {
@@ -765,6 +796,8 @@ function test_csum()
 end
 
 function test_resolve()
+	print("* resolve")
+
 	local pos
 
 	local tdis = tls_dissect(fake_default_tls)
@@ -814,6 +847,8 @@ function test_resolve()
 end
 
 function test_get_source_ip(opts)
+	print("* get_source_ip")
+
 	for k,d in ipairs({
 		'127.0.0.1','192.168.1.1','10.1.1.1','1.1.1.1','255.255.255.255',
 		'::1','fc81::4','2a06::1','2001:470::1','2002:0101:0101::1','::1.1.1.1'})
@@ -823,6 +858,8 @@ function test_get_source_ip(opts)
 	end
 end
 function test_ifaddrs(opts)
+	print("* ifaddrs")
+
 	local ifa = get_ifaddrs()
 	test_assert(ifa)
 	for ifname,ifinfo in pairs(ifa) do
@@ -834,6 +871,8 @@ function test_ifaddrs(opts)
 end
 
 function test_rawsend(opts)
+	print("* rawsend")
+
 	local ifout = (opts and opts.ifout) and opts.ifout
 	local function rawsend_fail_warning()
 		if not opts or not opts.ifout or #opts.ifout==0 then
@@ -874,7 +913,17 @@ function test_rawsend(opts)
 	local payload = brandom(math.random(100,1200))
 	local b
 
-	local target = pton("192.168.1.2")
+	local target
+	for ifname,ifinfo in pairs(get_ifaddrs()) do
+		for k,v in pairs(ifinfo.addr) do
+			if #v.addr==4 and string.sub(v.addr,1,2)=="\xC0\xA8" then
+				target = string.sub(v.addr,1,3)..bu8(u8add(u8(v.addr,4),1))
+				break
+			end
+		end
+	end
+	target = target or pton("192.168.254.32")
+	print("ipv4 target is "..ntop(target))
 	ip = {
 		ip_tos = 0,
 		ip_id = math.random(0,0xFFFF),
@@ -884,6 +933,10 @@ function test_rawsend(opts)
 		ip_src = get_source_ip(target),
 		ip_dst = target
 	}
+	if not ip.ip_src then
+		print("dest "..ntop(target).." unreachable")
+		test_assert(false)
+	end
 	udp = {
 		uh_sport = math.random(0,0xFFFF),
 		uh_dport = math.random(0,0xFFFF)
@@ -906,13 +959,27 @@ function test_rawsend(opts)
 	print("send ipv4 udp using pure rawsend without dissect")
 	test_assert(rawsend_print(raw, {repeats=5}))
 
-	target = pton("fdce:3124:164a:5318::2")
+	local target
+	for ifname,ifinfo in pairs(get_ifaddrs()) do
+		for k,v in pairs(ifinfo.addr) do
+			if #v.addr==16 and (string.sub(v.addr,1,1)=="\xFC" or string.sub(v.addr,1,1)=="\xFD") then
+				target = string.sub(v.addr,1,1)..bu8(u8add(u8(v.addr,2),1))..string.sub(v.addr,3)
+				break
+			end
+		end
+	end
+	target = target or pton("fdce:3124:164a:5318::2")
+	print("ipv6 target is "..ntop(target))
 	ip6 = {
 		ip6_flow = 0x60000000,
 		ip6_hlim = 1,
 		ip6_src = get_source_ip(target),
 		ip6_dst = target
 	}
+	if not ip6.ip6_src then
+		print("dest "..ntop(target).." unreachable")
+		test_assert(false)
+	end
 	dis = {ip6 = ip6, udp = udp, payload = payload}
 	print("send ipv6 udp")
 	test_assert(rawsend_dissect_print(dis, {repeats=3}))
