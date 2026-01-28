@@ -844,7 +844,7 @@ nfqws2 <глобальные_параметры>
 Фильтр ipp не работает с протоколами tcp, udp и icmp. Проверка пойдет по группам фильтра, соответствующим протоколу. Например, если задано только `--filter-ipp=6`,
 это не значит, что будут пропущены все tcp. Наоборот, это блокирует все, включая и сам tcp, потому что не задан `--filter-tcp`. Правильно будет указать `--filter-tcp=*`.
 
-icmp автоматически подразумевает и icmpv6 - они обрабатываются единым образом. Однако, [icmp types](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) для icmp и icmpv6 отличаются. Это нужно учитывать.
+icmp автоматически подразумевает и icmpv6 - они обрабатываются единым образом. Однако, icmp types для [icmp](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) и [icmpv6](https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml) отличаются. Это нужно учитывать.
 
 
 ### Шаблоны профилей
