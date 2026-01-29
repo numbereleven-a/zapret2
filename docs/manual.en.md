@@ -3677,7 +3677,7 @@ function syndata(ctx, desync)
 - arg: [standard reconstruct](#standard-reconstruct)
 - arg: [standard rawsend](#standard-rawsend)
 - arg: blob - a [blob](#passing-blobs) containing the fake payload. It must fit into a single packet; segmentation is not possible.
-- arg: tls_mod - apply the specified [tls_mod](#tls-mod) to the blob payload.
+- arg: tls_mod - apply the specified [tls_mod](#tls_mod) to the blob payload.
 
 The function adds a payload to the TCP SYN packet, applies modifications to it, and sends it instead of the original, issuing a `VERDICT_DROP`.
 If a non-SYN packet passes through, [instance cutoff](#instance_cutoff) is executed.
@@ -3728,7 +3728,7 @@ function fake(ctx, desync)
 - arg: [standard rawsend](#standard-rawsend)
 - arg: blob - a blob containing the fake payload. It can be of any length-segmentation is performed automatically.
 - arg: optional - abort the operation if the blob is missing.
-- arg: tls_mod - apply the specified [tls_mod](#tls-mod) to the blob payload.
+- arg: tls_mod - apply the specified [tls_mod](#tls_mod) to the blob payload.
 - default payload filter - "known"
 
 This is a direct fake-a separate packet or group of packets. The function does not issue a verdict and does not block the transmission of the original packet.
