@@ -1549,12 +1549,12 @@ The `p*counter` fields are 64-bit counters, so they do not suffer from this issu
 
 Some icmp types may contain an attached source packet to which icmp was generated. They are called "related."
 Such payloads are recognized, they are used to search the original conntrack record.
-If it is found, the cached profile (the one to which the attached package belongs) is selected.
+If it is found, the cached profile (the one to which the attached packet belongs) is selected.
 The direction is chosen as the reverse of the found record.
 The payload type is set to "ipv4" or "ipv6," the session protocol type is set from the source packet profile.
 Then icmp goes through the profile in the usual way. Desync function must be aware of this possibility.
 
-If icmp does not contain an attached package, it is invalid or conntrack record is not found, icmp passes on its own
+If icmp does not contain an attached packet, it is invalid or conntrack record is not found, icmp passes on its own
 without track.
 
 conntrack works only with tcp and udp, it does not keep records of pings or other icmp types.
