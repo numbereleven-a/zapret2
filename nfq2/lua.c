@@ -5,8 +5,13 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include <sys/ioctl.h>
+
+#ifdef __ANDROID__
+#include "andr/ifaddrs.h"
+#else
+#include <ifaddrs.h>
+#endif
 
 #ifdef __FreeBSD__
 
