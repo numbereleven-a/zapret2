@@ -266,6 +266,7 @@ end
 --   --in-range=a --lua-desync=synhide:synack
 --   nft add rule inet ztest post meta mark & 0x40000000 == 0x00000000 tcp sport 80 tcp flags & (fin | syn | rst | ack | urg) == (syn | ack) queue flags bypass to 200
 --   nft add rule inet ztest pre meta mark & 0x40000000 == 0x00000000 tcp dport 80 tcp flags & (fin | syn | rst | ack | urg) == ack tcp urgptr != 0 queue flags bypass to 200
+-- hides tcp 3-way handshake from DPI. optionally uses ghost SYN with low ttl to punch NAT hole
 -- arg : ghost - ghost syn ttl for ipv4. must be hop_to_last_nat+1. syn is not ghosted if not supplied
 -- arg : ghost6 - ghost syn hl for ipv6. must be hop_to_last_nat+1. syn is not ghosted if not supplied
 -- arg : synack - also fake synack
