@@ -153,11 +153,10 @@ static void ConntrackApplyPos(t_ctrack *t, bool bReverse, const struct dissect *
 		if (!((direct->pos - direct->uppos) & 0x80000000))
 			direct->uppos = direct->pos;
 	}
-	direct->winsize = ntohs(dis->tcp->th_win);
-	direct->winsize_calc = direct->winsize;
+	direct->winsize_calc = direct->winsize = ntohs(dis->tcp->th_win);
+	if (scale != SCALE_NONE) direct->scale = scale;
 	if (direct->scale != SCALE_NONE) direct->winsize_calc <<= direct->scale;
 	if (mss && !direct->mss) direct->mss = mss;
-	if (scale != SCALE_NONE) direct->scale = scale;
 
 	if (!direct->rseq_over_2G && ((direct->seq_last - direct->seq0) & 0x80000000))
 		direct->rseq_over_2G = true;
@@ -372,7 +371,7 @@ void ConntrackPoolDump(const t_conntrack *p)
 				t->track.pos.client.seq_last, t->track.pos.client.pos,
 				t->track.pos.server.seq_last, t->track.pos.server.pos);
 		printf(" req_retrans=%u cutoff=%u lua_in_cutoff=%u lua_out_cutoff=%u hostname=%s l7proto=%s\n",
-			t->track.req_retrans_counter, t->track.b_cutoff, t->track.b_lua_in_cutoff, t->track.b_lua_out_cutoff, t->track.hostname, l7proto_str(t->track.l7proto));
+			t->track.req_retrans_counter, t->track.b_cutoff, t->track.b_lua_in_cutoff, t->track.b_lua_out_cutoff, t->track.hostname ? t->track.hostname : "", l7proto_str(t->track.l7proto));
 	};
 }
 
