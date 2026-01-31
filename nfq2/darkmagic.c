@@ -373,7 +373,7 @@ void print_icmphdr(const struct icmp46 *icmp, bool v6)
 
 bool proto_check_ipv4(const uint8_t *data, size_t len)
 {
-	return 	len >= sizeof(struct ip) && (data[0] & 0xF0) == 0x40 &&
+	return 	len >= sizeof(struct ip) && (data[0] & 0xF0) == 0x40 && (data[0] & 0x0F)>=5 &&
 		len >= ((data[0] & 0x0F) << 2);
 }
 // move to transport protocol
@@ -402,7 +402,8 @@ bool proto_check_udp(const uint8_t *data, size_t len)
 }
 bool proto_check_udp_payload(const uint8_t *data, size_t len)
 {
-	return len >= ntohs(((struct udphdr*)data)->uh_ulen);
+	uint16_t l = ntohs(((struct udphdr*)data)->uh_ulen);
+	return l>=sizeof(struct udphdr) && len >= l;
 }
 void proto_skip_udp(const uint8_t **data, size_t *len)
 {
@@ -1491,7 +1492,7 @@ bool windivert_init(const char *filter)
 	return false;
 }
 
-static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa)
+static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa, unsigned int *wa_count)
 {
 	UINT recv_len;
 	DWORD err;
@@ -1510,8 +1511,10 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 	}
 	usleep(0);
 
-	if (WinDivertRecvEx(hFilter, packet, *len, &recv_len, 0, wa, NULL, &ovl))
+	*wa_count *= sizeof(WINDIVERT_ADDRESS);
+	if (WinDivertRecvEx(hFilter, packet, *len, &recv_len, 0, wa, wa_count, &ovl))
 	{
+		*wa_count /= sizeof(WINDIVERT_ADDRESS);
 		*len = recv_len;
 		return true;
 	}
@@ -1540,6 +1543,7 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 				}
 				if (!GetOverlappedResult(hFilter,&ovl,&rd,TRUE))
 					continue;
+				*wa_count /= sizeof(WINDIVERT_ADDRESS);
 				*len = rd;
 				return true;
 			case ERROR_INSUFFICIENT_BUFFER:
@@ -1555,9 +1559,9 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 	}
 	return false;
 }
-bool windivert_recv(uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa)
+bool windivert_recv(uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa, unsigned int *wa_count)
 {
-	return windivert_recv_filter(w_filter,packet,len,wa);
+	return windivert_recv_filter(w_filter,packet,len,wa,wa_count);
 }
 
 static bool windivert_send_filter(HANDLE hFilter, const uint8_t *packet, size_t len, const WINDIVERT_ADDRESS *wa)
@@ -2264,8 +2268,10 @@ void verdict_udp_csum_fix(uint8_t verdict, struct udphdr *udphdr, size_t transpo
 		#ifdef __FreeBSD__
 		if (ip6hdr)
 		#endif
+		{
 			DLOG("fixing udp checksum\n");
 			udp_fix_checksum(udphdr,transport_len,ip,ip6hdr);
+		}
 	}
 #endif
 }
@@ -2281,8 +2287,10 @@ void verdict_icmp_csum_fix(uint8_t verdict, struct icmp46 *icmphdr, size_t trans
 		#ifdef __FreeBSD__
 		if (ip6hdr)
 		#endif
+		{
 			DLOG("fixing icmp checksum\n");
 			icmp_fix_checksum(icmphdr,transport_len,ip6hdr);
+		}
 	}
 #endif
 }

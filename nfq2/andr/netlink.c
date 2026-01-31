@@ -30,7 +30,7 @@ static int __netlink_enumerate(int fd, unsigned int seq, int type, int af,
 	if (r < 0) return r;
 
 	while (1) {
-		r = recv(fd, u.buf, sizeof(u.buf), MSG_DONTWAIT);
+		r = recv(fd, u.buf, sizeof(u.buf), 0);
 		if (r <= 0) return -1;
 		for (h = &u.reply; NLMSG_OK(h, (void*)&u.buf[r]); h = NLMSG_NEXT(h)) {
 			if (h->nlmsg_type == NLMSG_DONE) return 0;
