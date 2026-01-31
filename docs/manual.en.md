@@ -2092,7 +2092,6 @@ function conntrack_feed(dissect, reconstruct_opts)
 ```
 
 "Feed" dissect to conntrack the way as if it was received from the network.
-aaa
 2 values are returned : [track](#the-track-table-structure) and bool value "outgoing".
 outgoing is true if a new conntrack record was created and it was a SYN packet in case of tcp or any packet in case of udp.
 If conntrack record already exists outgoing is true if the record was found by direct tuple - src_ip, src_port, dst_ip, dst_port.
