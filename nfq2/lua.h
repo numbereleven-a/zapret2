@@ -101,6 +101,7 @@ void lua_push_ip6hdr(lua_State *L, const struct ip6_hdr *ip6, size_t len);
 void lua_pushf_ip6hdr(lua_State *L, const struct ip6_hdr *ip6, size_t len);
 void lua_push_dissect(lua_State *L, const struct dissect *dis);
 void lua_pushf_dissect(lua_State *L, const struct dissect *dis);
+void lua_push_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_positions *tpos, bool bIncoming);
 void lua_pushf_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_positions *tpos, bool bIncoming);
 void lua_pushf_args(lua_State *L, const struct str2_list_head *args, int idx_desync, bool subst_prefix);
 void lua_pushf_pos(lua_State *L, const char *name, const struct packet_pos *pos);

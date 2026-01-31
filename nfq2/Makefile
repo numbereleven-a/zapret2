@@ -17,6 +17,7 @@ LIBS_CYGWIN64 = -lwindivert64
 RES_CYGWIN32 = windows/res/winws_res32.o
 RES_CYGWIN64 = windows/res/winws_res64.o
 SRC_FILES = *.c crypto/*.c
+SRC_FILES_ANDROID = $(SRC_FILES) andr/*.c
 
 LUA_JIT?=1
 
@@ -137,8 +138,8 @@ nfqws2: $(SRC_FILES)
 systemd: $(SRC_FILES)
 	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_LINUX) $(CFLAGS_SYSTEMD) -o nfqws2 $(SRC_FILES) $(LIBS) $(LUA_LIB) $(LIBS_LINUX) $(LIBS_SYSTEMD) $(LDFLAGS)
 
-android: $(SRC_FILES)
-	$(CC) -s $(CFLAGS) $(LUA_CFL) -o nfqws2 $(SRC_FILES) $(LIBS) $(LUA_LIB) $(LIBS_LINUX) $(LDFLAGS) $(LDFLAGS_ANDROID)
+android: $(SRC_FILES_ANDROID)
+	$(CC) -s $(CFLAGS) $(LUA_CFL) -o nfqws2 $(SRC_FILES_ANDROID) $(LIBS) $(LUA_LIB) $(LIBS_LINUX) $(LDFLAGS) $(LDFLAGS_ANDROID)
 
 bsd: $(SRC_FILES)
 	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_BSD) -o dvtws2 $(SRC_FILES) $(LIBS) $(LUA_LIB) $(LIBS_BSD) $(LDFLAGS)

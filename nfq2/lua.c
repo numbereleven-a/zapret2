@@ -5,8 +5,13 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include <sys/ioctl.h>
+
+#ifdef __ANDROID__
+#include "andr/ifaddrs.h"
+#else
+#include <ifaddrs.h>
+#endif
 
 #ifdef __FreeBSD__
 
@@ -1659,11 +1664,10 @@ void lua_pushf_ctrack_pos(lua_State *L, const t_ctrack *ctrack, const t_ctrack_p
 	LUA_STACK_GUARD_LEAVE(L, 0)
 }
 
-void lua_pushf_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_positions *tpos, bool bIncoming)
+void lua_push_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_positions *tpos, bool bIncoming)
 {
 	LUA_STACK_GUARD_ENTER(L)
 
-	lua_pushliteral(L, "track");
 	if (ctrack)
 	{
 		if (!tpos) tpos = &ctrack->pos;
@@ -1672,8 +1676,6 @@ void lua_pushf_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_posit
 
 		if (ctrack->incoming_ttl)
 			lua_pushf_int(L, "incoming_ttl", ctrack->incoming_ttl);
-		else
-			lua_pushf_nil(L, "incoming_ttl");
 		lua_pushf_str(L, "l7proto", l7proto_str(ctrack->l7proto));
 		lua_pushf_str(L, "hostname", ctrack->hostname);
 		if (ctrack->hostname) lua_pushf_bool(L, "hostname_is_ip", ctrack->hostname_is_ip);
@@ -1715,6 +1717,16 @@ void lua_pushf_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_posit
 	}
 	else
 		lua_pushnil(L);
+
+	LUA_STACK_GUARD_LEAVE(L, 1)
+}
+
+void lua_pushf_ctrack(lua_State *L, const t_ctrack *ctrack, const t_ctrack_positions *tpos, bool bIncoming)
+{
+	LUA_STACK_GUARD_ENTER(L)
+
+	lua_pushliteral(L, "track");
+	lua_push_ctrack(L, ctrack, tpos, bIncoming);
 	lua_rawset(L,-3);
 
 	LUA_STACK_GUARD_LEAVE(L, 0)
@@ -2856,7 +2868,7 @@ static int luacall_rawsend(lua_State *L)
 
 static int luacall_rawsend_dissect(lua_State *L)
 {
-	// rawsend(data, rawsend_opts, reconstruct_opts)
+	// rawsend_dissect(data, rawsend_opts, reconstruct_opts)
 	lua_check_argc_range(L,"rawsend_dissect",1,3);
 
 	LUA_STACK_GUARD_ENTER(L)
@@ -2867,15 +2879,14 @@ static int luacall_rawsend_dissect(lua_State *L)
 	uint32_t fwmark;
 	sockaddr_in46 sa;
 	bool b, badsum, keepsum, ip6_preserve_next;
-	uint8_t buf[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
 	uint8_t last_proto;
-
-	len = sizeof(buf);
+	uint8_t buf[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
 
 	luaL_checktype(L,1,LUA_TTABLE);
 	lua_rawsend_extract_options(L,2, &repeats, &fwmark, &ifout);
 	lua_reconstruct_extract_options(L, 3, &keepsum, &badsum, &ip6_preserve_next, &last_proto);
 
+	len = sizeof(buf);
 	if (!lua_reconstruct_dissect(L, 1, buf, &len, keepsum, badsum, last_proto, ip6_preserve_next))
 		luaL_error(L, "invalid dissect data");
 
@@ -2886,6 +2897,51 @@ static int luacall_rawsend_dissect(lua_State *L)
 	lua_pushboolean(L, b);
 
 	LUA_STACK_GUARD_RETURN(L,1)
+}
+
+static int luacall_conntrack_feed(lua_State *L)
+{
+	// conntrack_feed(dissect, reconstruct_opts) return track,bOutgoing
+	lua_check_argc_range(L,"conntrack_feed",1,3);
+
+	LUA_STACK_GUARD_ENTER(L)
+
+	if (params.ctrack_disable)
+		goto err;
+	else
+	{
+		size_t len;
+		bool badsum, keepsum, ip6_preserve_next, bReverse;
+		uint8_t last_proto;
+		struct dissect dis;
+		t_ctrack *ctrack;
+		uint8_t buf[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
+
+		luaL_checktype(L,1,LUA_TTABLE);
+		lua_reconstruct_extract_options(L, 2, &keepsum, &badsum, &ip6_preserve_next, &last_proto);
+
+		len = sizeof(buf);
+		if (!lua_reconstruct_dissect(L, 1, buf, &len, keepsum, badsum, last_proto, ip6_preserve_next))
+			luaL_error(L, "invalid dissect data");
+
+		proto_dissect_l3l4(buf, len, &dis, false);
+
+		ConntrackPoolPurge(&params.conntrack);
+		if (ConntrackPoolFeed(&params.conntrack, &dis, &ctrack, &bReverse))
+		{
+			lua_push_ctrack(L, ctrack, NULL, bReverse);
+			lua_pushboolean(L, !bReverse); // outgoing
+		}
+		else
+			goto err;
+	}
+
+ex:
+	LUA_STACK_GUARD_RETURN(L,2)
+err:
+	lua_pushnil(L);
+	lua_pushnil(L);
+	goto ex;
 }
 
 static int luacall_get_source_ip(lua_State *L)
@@ -4119,6 +4175,9 @@ static void lua_init_functions(void)
 		// send packets
 		{"rawsend",luacall_rawsend},
 		{"rawsend_dissect",luacall_rawsend_dissect},
+
+		// conntrack inject packet
+		{"conntrack_feed",luacall_conntrack_feed},
 
 		// get source addr when connecting to specified target addr
 		{"get_source_ip",luacall_get_source_ip},
