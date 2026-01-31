@@ -1491,7 +1491,7 @@ bool windivert_init(const char *filter)
 	return false;
 }
 
-static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa)
+static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa, unsigned int *wa_count)
 {
 	UINT recv_len;
 	DWORD err;
@@ -1510,8 +1510,10 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 	}
 	usleep(0);
 
-	if (WinDivertRecvEx(hFilter, packet, *len, &recv_len, 0, wa, NULL, &ovl))
+	*wa_count *= sizeof(WINDIVERT_ADDRESS);
+	if (WinDivertRecvEx(hFilter, packet, *len, &recv_len, 0, wa, wa_count, &ovl))
 	{
+		*wa_count /= sizeof(WINDIVERT_ADDRESS);
 		*len = recv_len;
 		return true;
 	}
@@ -1540,6 +1542,7 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 				}
 				if (!GetOverlappedResult(hFilter,&ovl,&rd,TRUE))
 					continue;
+				*wa_count /= sizeof(WINDIVERT_ADDRESS);
 				*len = rd;
 				return true;
 			case ERROR_INSUFFICIENT_BUFFER:
@@ -1555,9 +1558,9 @@ static bool windivert_recv_filter(HANDLE hFilter, uint8_t *packet, size_t *len, 
 	}
 	return false;
 }
-bool windivert_recv(uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa)
+bool windivert_recv(uint8_t *packet, size_t *len, WINDIVERT_ADDRESS *wa, unsigned int *wa_count)
 {
-	return windivert_recv_filter(w_filter,packet,len,wa);
+	return windivert_recv_filter(w_filter,packet,len,wa,wa_count);
 }
 
 static bool windivert_send_filter(HANDLE hFilter, const uint8_t *packet, size_t len, const WINDIVERT_ADDRESS *wa)

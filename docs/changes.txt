@@ -211,3 +211,5 @@ v0.8.1
 * zapret-obfs: ippxor, udp2icmp, synhide
 * nfqws2: LUA_COMPAT_VER=5
 * winws2: --wf-raw-filter
+* nfqws2: conntrack_feed
+* winws2: use windivert bulk mode

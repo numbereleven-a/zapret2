@@ -658,17 +658,22 @@ exiterr:
 
 #elif defined (__CYGWIN__)
 
+#define WINDIVERT_BULK_MAX		128
+// do not make it less than 65536 - loopback packets can be up to 64K
+#define WINDIVERT_PACKET_BUF_SIZE	192000
+
 static int win_main()
 {
-	size_t len, modlen;
+	size_t len, packet_len, left, modlen;
 	unsigned int id;
 	uint8_t verdict;
 	bool bOutbound;
 	uint32_t mark;
-	WINDIVERT_ADDRESS wa;
 	char ifname[IFNAMSIZ];
 	int res=0;
-	uint8_t packet[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
+	WINDIVERT_ADDRESS wa[WINDIVERT_BULK_MAX];
+	uint8_t *packets = NULL, *packet, *mod=NULL;
+	unsigned int n,wa_count;
 
 	// windows emulated fork logic does not cover objects outside of cygwin world. have to daemonize before inits
 	if (params.daemon) daemonize();
@@ -685,7 +690,10 @@ static int win_main()
 		res=w_win32_error; goto ex;
 	}
 
-	catch_signals();
+	if (!(packets = malloc(WINDIVERT_PACKET_BUF_SIZE)) || !(mod = malloc(RECONSTRUCT_MAX_SIZE)))
+	{
+		res=ERROR_NOT_ENOUGH_MEMORY; goto ex;
+	}
 
 	for (;;)
 	{
@@ -730,10 +738,11 @@ static int win_main()
 			goto ex;
 		}
 
-		for (id = 0;; id++)
+		for (id = 0;;)
 		{
-			len = sizeof(packet);
-			if (!windivert_recv(packet, &len, &wa))
+			len = WINDIVERT_PACKET_BUF_SIZE;
+			wa_count = WINDIVERT_BULK_MAX;
+			if (!windivert_recv(packets, &len, wa, &wa_count))
 			{
 				if (errno == ENOBUFS)
 				{
@@ -758,39 +767,60 @@ static int win_main()
 			ReloadCheck();
 			lua_do_gc();
 
-			*ifname = 0;
-			snprintf(ifname, sizeof(ifname), "%u.%u", wa.Network.IfIdx, wa.Network.SubIfIdx);
-			DLOG("\npacket: id=%u len=%zu %s IPv6=%u IPChecksum=%u TCPChecksum=%u UDPChecksum=%u IfIdx=%u.%u\n", id, len, wa.Outbound ? "outbound" : "inbound", wa.IPv6, wa.IPChecksum, wa.TCPChecksum, wa.UDPChecksum, wa.Network.IfIdx, wa.Network.SubIfIdx);
-			if (wa.Impostor)
+			for (n=0, packet=packets, left = len ; n<wa_count ; n++, packet+=packet_len, left-=packet_len, id++)
 			{
-				DLOG("windivert: passing impostor packet\n");
-				verdict = VERDICT_PASS;
-			}
-			else
-			{
-				mark = 0;
-				// pseudo interface id IfIdx.SubIfIdx
-				modlen = sizeof(packet);
-				verdict = processPacketData(&mark, wa.Outbound ? "" : ifname, wa.Outbound ? ifname : "", packet, len, packet, &modlen);
-			}
-			switch (verdict & VERDICT_MASK)
-			{
-			case VERDICT_PASS:
-				DLOG("packet: id=%u reinject unmodified\n", id);
-				if (!windivert_send(packet, len, &wa))
-					DLOG_ERR("windivert: reinject of packet id=%u failed\n", id);
-				break;
-			case VERDICT_MODIFY:
-				DLOG("packet: id=%u reinject modified len %zu => %zu\n", id, len, modlen);
-				if (!windivert_send(packet, modlen, &wa))
-					DLOG_ERR("windivert: reinject of packet id=%u failed\n", id);
-				break;
-			default:
-				DLOG("packet: id=%u drop\n", id);
+				if (wa[n].IPv6)
+				{
+					if (left<sizeof(WINDIVERT_IPV6HDR) || left<(packet_len = sizeof(WINDIVERT_IPV6HDR) + ntohs(((WINDIVERT_IPV6HDR*)packet)->Length)))
+					{
+						DLOG_ERR("invalid ipv6 packet\n");
+						break;
+					}
+				}
+				else
+				{
+					if (left<sizeof(WINDIVERT_IPHDR) || left<(packet_len = ntohs(((WINDIVERT_IPHDR*)packet)->Length)))
+					{
+						DLOG_ERR("invalid ipv4 packet\n");
+						break;
+					}
+				}
+
+				*ifname = 0;
+				snprintf(ifname, sizeof(ifname), "%u.%u", wa[n].Network.IfIdx, wa[n].Network.SubIfIdx);
+				DLOG("\npacket: id=%u len=%zu %s IPv6=%u IPChecksum=%u TCPChecksum=%u UDPChecksum=%u IfIdx=%u.%u\n", id, packet_len, wa[n].Outbound ? "outbound" : "inbound", wa[n].IPv6, wa[n].IPChecksum, wa[n].TCPChecksum, wa[n].UDPChecksum, wa[n].Network.IfIdx, wa[n].Network.SubIfIdx);
+				if (wa[n].Impostor)
+				{
+					DLOG("windivert: passing impostor packet\n");
+					verdict = VERDICT_PASS;
+				}
+				else
+				{
+					mark = 0;
+					modlen = RECONSTRUCT_MAX_SIZE;
+					verdict = processPacketData(&mark, wa[n].Outbound ? "" : ifname, wa[n].Outbound ? ifname : "", packet, packet_len, mod, &modlen);
+				}
+				switch (verdict & VERDICT_MASK)
+				{
+				case VERDICT_PASS:
+					DLOG("packet: id=%u reinject unmodified\n", id);
+					if (!windivert_send(packet, packet_len, wa+n))
+						DLOG_ERR("windivert: reinject of packet id=%u failed\n", id);
+					break;
+				case VERDICT_MODIFY:
+					DLOG("packet: id=%u reinject modified len %zu => %zu\n", id, packet_len, modlen);
+					if (!windivert_send(mod, modlen, wa+n))
+						DLOG_ERR("windivert: reinject of packet id=%u failed\n", id);
+					break;
+				default:
+					DLOG("packet: id=%u drop\n", id);
+				}
 			}
 		}
 	}
 ex:
+	free(mod);
+	free(packets);
 	win_dark_deinit();
 	lua_shutdown();
 	rawsend_cleanup();
@@ -1423,26 +1453,22 @@ dont_add:
 }
 
 #define DIVERT_NO_LOCALNETSv4_DST "(" \
-                   "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
                    "(ip.DstAddr < 10.0.0.0 or ip.DstAddr > 10.255.255.255) and " \
                    "(ip.DstAddr < 192.168.0.0 or ip.DstAddr > 192.168.255.255) and " \
                    "(ip.DstAddr < 172.16.0.0 or ip.DstAddr > 172.31.255.255) and " \
                    "(ip.DstAddr < 169.254.0.0 or ip.DstAddr > 169.254.255.255))"
 #define DIVERT_NO_LOCALNETSv4_SRC "(" \
-                   "(ip.SrcAddr < 127.0.0.1 or ip.SrcAddr > 127.255.255.255) and " \
                    "(ip.SrcAddr < 10.0.0.0 or ip.SrcAddr > 10.255.255.255) and " \
                    "(ip.SrcAddr < 192.168.0.0 or ip.SrcAddr > 192.168.255.255) and " \
                    "(ip.SrcAddr < 172.16.0.0 or ip.SrcAddr > 172.31.255.255) and " \
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255))"
 
 #define DIVERT_NO_LOCALNETSv6_DST "(" \
-                   "(ipv6.DstAddr > ::1) and " \
                    "(ipv6.DstAddr < 2001::0 or ipv6.DstAddr >= 2001:1::0) and " \
                    "(ipv6.DstAddr < fc00::0 or ipv6.DstAddr >= fe00::0) and " \
                    "(ipv6.DstAddr < fe80::0 or ipv6.DstAddr >= fec0::0) and " \
                    "(ipv6.DstAddr < ff00::0 or ipv6.DstAddr >= ffff::0))"
 #define DIVERT_NO_LOCALNETSv6_SRC "(" \
-                   "(ipv6.SrcAddr > ::1) and " \
                    "(ipv6.SrcAddr < 2001::0 or ipv6.SrcAddr >= 2001:1::0) and " \
                    "(ipv6.SrcAddr < fc00::0 or ipv6.SrcAddr >= fe00::0) and " \
                    "(ipv6.SrcAddr < fe80::0 or ipv6.SrcAddr >= fec0::0) and " \
