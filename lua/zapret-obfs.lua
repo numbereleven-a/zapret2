@@ -419,6 +419,7 @@ function synhide(ctx, desync)
 				table.remove(desync.dis.tcp.options, idx)
 			end
 		end
+		desync.track = conntrack_feed(desync.dis)
 	end
 
 	if fl==TH_SYN then
@@ -462,7 +463,6 @@ function synhide(ctx, desync)
 		DLOG("synhide: server received magic. restore SYN")
 		desync.dis.tcp.th_flags = bitor(bitand(desync.dis.tcp.th_flags, bitnot(TH_ACK)), TH_SYN)
 		clear_magic()
-		desync.track,out = conntrack_feed(desync.dis)
 		if not desync.arg.synack then
 			DLOG("synhide: mission complete")
 			instance_cutoff_shim(ctx, desync)
