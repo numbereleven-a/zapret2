@@ -651,7 +651,7 @@ static int luacall_hash(lua_State *L)
 
 static int luacall_aes(lua_State *L)
 {
-	// aes_gcm(bEncrypt, key, in) returns out
+	// aes(bEncrypt, key, in) returns out
 	lua_check_argc(L,"aes",3);
 
 	LUA_STACK_GUARD_ENTER(L)
@@ -2901,7 +2901,7 @@ static int luacall_rawsend_dissect(lua_State *L)
 
 static int luacall_conntrack_feed(lua_State *L)
 {
-	// conntrack_feed(dissect, reconstruct_opts) return track,bOutgoing
+	// conntrack_feed(dissect/raw_packet[, reconstruct_opts]) return track,bOutgoing
 	lua_check_argc_range(L,"conntrack_feed",1,3);
 
 	LUA_STACK_GUARD_ENTER(L)
@@ -2915,16 +2915,26 @@ static int luacall_conntrack_feed(lua_State *L)
 		uint8_t last_proto;
 		struct dissect dis;
 		t_ctrack *ctrack;
+		const uint8_t *pbuf;
 		uint8_t buf[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
 
-		luaL_checktype(L,1,LUA_TTABLE);
-		lua_reconstruct_extract_options(L, 2, &keepsum, &badsum, &ip6_preserve_next, &last_proto);
+		switch(lua_type(L,1))
+		{
+			case LUA_TTABLE:
+				lua_reconstruct_extract_options(L, 2, &keepsum, &badsum, &ip6_preserve_next, &last_proto);
+				len = sizeof(buf);
+				if (!lua_reconstruct_dissect(L, 1, buf, &len, keepsum, badsum, last_proto, ip6_preserve_next))
+					luaL_error(L, "invalid dissect data");
+				pbuf = buf;
+				break;
+			case LUA_TSTRING:
+				pbuf = (const uint8_t*)lua_tolstring(L,1,&len);
+				break;
+			default:
+				luaL_error(L, "invalid packet data type");
+		}
 
-		len = sizeof(buf);
-		if (!lua_reconstruct_dissect(L, 1, buf, &len, keepsum, badsum, last_proto, ip6_preserve_next))
-			luaL_error(L, "invalid dissect data");
-
-		proto_dissect_l3l4(buf, len, &dis, false);
+		proto_dissect_l3l4(pbuf, len, &dis, false);
 
 		ConntrackPoolPurge(&params.conntrack);
 		if (ConntrackPoolFeed(&params.conntrack, &dis, &ctrack, &bReverse))
@@ -3704,7 +3714,7 @@ static bool lua_file_open_test(const char *filename, bool *b_gzip, char *fname)
 		if (b_gzip) *b_gzip = is_gzip(F);
 		fclose(F);
 	}
-	return !!F;
+	return F;
 }
 
 bool lua_test_init_script_files(void)
