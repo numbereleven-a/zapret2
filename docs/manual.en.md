@@ -1715,11 +1715,11 @@ Consequently, all functions include the bit depth in their name. If arguments ex
 #### uX
 
 ```
-function u8(raw_string, offset)
-function u16(raw_string, offset)
-function u24(raw_string, offset)
-function u32(raw_string, offset)
-function u48(raw_string, offset)
+function u8(raw_string[, offset])
+function u16(raw_string[, offset])
+function u24(raw_string[, offset])
+function u32(raw_string[, offset])
+function u48(raw_string[, offset])
 ```
 
 These functions are used to extract numeric fields in big-endian format from a raw string.
@@ -1860,7 +1860,7 @@ Performs simple encryption or decryption of a single AES block.
 #### aes_gcm
 
 ```
-function aes_gcm(encrypt, key, iv, data, associated_data)
+function aes_gcm(encrypt, key, iv, data[, associated_data])
 ```
 
 AES encryption in GCM mode.
@@ -1909,9 +1909,9 @@ The function includes both extraction and expansion phases.
 #### gunzip
 
 ```
-function gunzip_init(windowBits)
+function gunzip_init([windowBits])
 function gunzip_end(zstream)
-function gunzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_size)
+function gunzip_inflate(zstream, compressed_data[, expected_uncompressed_chunk_size])
 ```
 
 * `gunzip_init` creates and returns a gzip stream context for subsequent function calls. See the zlib documentation for `windowBits` values (default is 47).
@@ -1923,9 +1923,9 @@ function gunzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_si
 #### gzip
 
 ```
-function gzip_init(windowBits, level, memlevel)
+function gzip_init([windowBits[, level[, memlevel]]])
 function gzip_end(zstream)
-function gzip_deflate(zstream, uncompressed_data, expected_compressed_chunk_size)
+function gzip_deflate(zstream, uncompressed_data[, expected_compressed_chunk_size])
 ```
 
 * `gzip_init` creates and returns a gzip stream context for subsequent function calls. For `windowBits` values, refer to the zlib documentation (default is 31). `level` specifies the compression level from 1 to 9 (default is 9), and `memlevel` defines the allowed memory usage level from 1 to 8 (default is 8).
@@ -2208,7 +2208,7 @@ function resolve_range(blob,l7payload_type,marker_list[,strict,zero_based_pos])
 #### tls_mod
 
 ```
-function tls_mod(blob, modlist, payload)
+function tls_mod(blob, modlist[, payload])
 ```
 
 - blob - the blob being acted upon
@@ -2229,7 +2229,7 @@ Mods :
 #### instance_cutoff
 
 ```
-function instance_cutoff(ctx, outgoing)
+function instance_cutoff(ctx[, outgoing])
 ```
 
 Voluntary self-cutoff of an instance for the specified direction.
@@ -2242,7 +2242,7 @@ The instance will no longer be called within the current flow.
 #### lua_cutoff
 
 ```
-function lua_cutoff(ctx, outgoing)
+function lua_cutoff(ctx[, outgoing])
 ```
 
 Similar to `instance_cutoff`, but the entire profile is cut off from the flow.
@@ -2458,8 +2458,8 @@ function pattern(pat, offset, len)
 ### blob
 
 ```
-function blob(desync, name, def)
-function blob_or_def(desync, name, def)
+function blob(desync, name[, def])
+function blob_or_def(desync, name[, def])
 ```
 
 - `blob` is the standard function for retrieving a blob. If `name` starts with `0x`, the remainder is interpreted as a HEX string. Otherwise, the variable `name` is read first from `desync`. If not found there, it is taken from global variables. If it still cannot be found, the value `def` is used. If `name` is `nil` or an empty string, an error is raised.
@@ -2496,9 +2496,9 @@ function is_retransmission(desync)
 ## Position handling
 
 ```
-function pos_counter_overflow(desync, mode, reverse)
+function pos_counter_overflow(desync, mode[, reverse])
 function pos_get_pos(track_pos, mode)
-function pos_get(desync, mode, reverse)
+function pos_get(desync, mode[, reverse])
 function pos_check_from(desync, range)
 function pos_check_to(desync, range)
 function pos_check_range(desync, range)
@@ -3059,7 +3059,7 @@ When inserting or deleting extension headers, the correct chain of subsequent pr
 
 ```
 function l3_base_len(dis)
-function l3_extra_len(dis, ip6_exthdr_last_idx)
+function l3_extra_len(dis[, ip6_exthdr_last_idx])
 function l3_len(dis)
 function l4_base_len(dis)
 function l4_extra_len(dis)
@@ -3086,7 +3086,7 @@ Calculates the sizes of various dissect elements after reconstruction.
 ### genhost
 
 ```
-function genhost(len, template)
+function genhost(len[, template])
 ```
 
 Generates a random hostname of length `len`.
@@ -3137,7 +3137,7 @@ function readfile(filename)
 Reads the entire file. Throws an error if opening or reading the file fails.
 
 ```
-function z_readfile(filename, expected_ratio)
+function z_readfile(filename[, expected_ratio])
 ```
 
 Automatically detects whether the file is gzipped. If so, it decompresses it; otherwise, it reads it as is. Throws an error if opening or reading the file fails.
@@ -3158,14 +3158,14 @@ function is_gzip_file(filename)
 Returns true if the file is a gzip file, otherwise false. Throws an error if the file cannot be opened.
 
 ```
-function gunzip_file(filename, expected_ratio, read_block_size)
+function gunzip_file(filename[, expected_ratio[, read_block_size]])
 ```
 
 Decompresses a file and returns it as a raw string. Throws an error if opening or reading the file fails. Returns `nil` in case of memory exhaustion. `read_block_size` determines the chunk size for reading (defaults to 16K).
 `expected_ratio` is the expected ratio of decompressed data to compressed data (defaults to 4).
 
 ```
-function gzip_file(filename, data, expected_ratio, level, memlevel, compress_block_size)
+function gzip_file(filename, data[, expected_ratio[, level[, memlevel[, compress_block_size]]]])
 ```
 
 Compresses a raw string into a gzip file. Throws an error if opening or reading the file fails. Returns `nil` if the gzip data is corrupted or memory is exhausted.
@@ -3270,7 +3270,7 @@ The `ipfrag_options` contain only two standard parameters. The rest are handled 
 ### apply_ip_id
 
 ```
-function apply_ip_id(desync, dis, ipid_options, def)
+function apply_ip_id(desync[, dis[, ipid_options[, def]]])
 ```
 
 Applies the [ip_id policy](#standard-ipid) from `ipid_options` to the dissect `dis`.
@@ -3281,7 +3281,7 @@ If `ipid_options` is `nil`, `desync.arg` is used.
 ### apply_fooling
 
 ```
-function apply_fooling(desync, dis, fooling_options)
+function apply_fooling(desync[, dis[, fooling_options]])
 ```
 
 Applies a set of L3/L4 header modifications ([fooling](#standard-fooling)), as described in `fooling_options`, to the dissect `dis`.
@@ -3354,7 +3354,7 @@ All functions utilize [options.reconstruct](#standard-reconstruct) and [options.
 ### rawsend_dissect_ipfrag
 
 ```
-function rawsend_dissect_ipfrag(dis, options)
+function rawsend_dissect_ipfrag(dis[, options])
 ```
 
 Sends dissect `dis` with IP fragmentation as specified in `options.ipfrag`. If omitted, it is sent without fragmentation.
@@ -3364,7 +3364,7 @@ Sends fragments in reverse order if `options.ipfrag.ipfrag_disorder` is specifie
 ### rawsend_dissect_segmented
 
 ```
-function rawsend_dissect_segmented(desync, dis, mss, options)
+function rawsend_dissect_segmented(desync[, dis[, mss[, options]]])
 ```
 
 Sends dissect `dis` with automatic TCP segmentation based on MSS, applying `options.fooling` and `options.ipid`.
@@ -3377,7 +3377,7 @@ The `ipid` is applied to each fragment. Segmentation is not possible for UDP and
 ### rawsend_payload_segmented
 
 ```
-function rawsend_payload_segmented(desync, payload, seq, options)
+function rawsend_payload_segmented(desync[, payload[, seq[, options]]])
 ```
 
 Constructs a temporary dissect based on `desync.dis`, with optional payload replacement and optional `seq` offset, applying `options`, and sends it via `rawsend_dissect_segmented`.
@@ -3393,8 +3393,8 @@ Standard `options` are formed as follows:
 ## Standard direction and payload filters
 
 ```
-function direction_check(desync, def)
-function direction_cutoff_opposite(ctx, desync, def)
+function direction_check(desync[, def])
+function direction_cutoff_opposite(ctx, desync[, def])
 ```
 
 The direction filter is a string ("in", "out", or "any") passed via `desync.arg.dir`. If the argument is missing, the `def` value is used.
@@ -3403,8 +3403,8 @@ The direction filter is a string ("in", "out", or "any") passed via `desync.arg.
 - `direction_cutoff_opposite` performs an [instance cutoff](#instance_cutoff) on the current direction if it does not match the filter.
 
 ```
-function payload_match_filter(l7payload, l7payload_filter, def)
-function payload_check(desync, def)
+function payload_match_filter(l7payload[, l7payload_filter[, def]])
+function payload_check(desync[, def])
 ```
 
 These functions operate on a string representing a comma-separated list of [payloads](#protocol-detection). All empty packets have the payload `empty`, and unknown ones are `unknown`. Special values include `all` and `known`. `all` means any payload; `known` means anything that is not `unknown` or `empty`. A `~` prefix at the beginning denotes logical inversion (non-match).
@@ -3445,7 +3445,7 @@ It may be difficult to understand how orchestration works from a dry description
 ### instance_cutoff_shim
 
 ```
-function instance_cutoff_shim(ctx, desync, dir)
+function instance_cutoff_shim(ctx, desync[, dir])
 ```
 
 Performs a standard [instance cutoff](#instance_cutoff) in the direction `dir` if `ctx` is present; otherwise, it performs the cutoff via a duplicate mechanism whose state is stored in `desync.track.lua_state`. `dir = true` for the outgoing direction, `dir = false` for incoming, and `dir = nil` for both directions.

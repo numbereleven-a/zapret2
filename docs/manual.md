@@ -1720,7 +1720,7 @@ conntrack работает только с tcp и udp, он не ведет уч
 #### Особенности обработки raw ip
 
 Если ip протокол не распознан как tcp,udp,icmp,icmpv6, он считается raw ip.
-В диссекте выдаются поля ip, ip6, payload.  payload включает содержимое пакета после L3 заголовка.
+В диссекте выдаются поля ip, ip6, payload.  payload включает содержимое пакета после L3 заголовков.
 desync.track всегда отсутствует.
 
 
@@ -1867,11 +1867,11 @@ function bitset(u48, bit_from, bit_to, set)
 #### uX
 
 ```
-function u8(raw_string, offset)
-function u16(raw_string, offset)
-function u24(raw_string, offset)
-function u32(raw_string, offset)
-function u48(raw_string, offset)
+function u8(raw_string[, offset])
+function u16(raw_string[, offset])
+function u24(raw_string[, offset])
+function u32(raw_string[, offset])
+function u48(raw_string[, offset])
 ```
 
 Эти функции используются для извлечения числовых полей в формате big endian из raw строки.
@@ -2014,7 +2014,7 @@ function aes(encrypt, key, data)
 #### aes_gcm
 
 ```
-function aes_gcm(encrypt, key, iv, data, associated_data)
+function aes_gcm(encrypt, key, iv, data[, associated_data])
 ```
 
 Шифрование в режиме aes-gcm.
@@ -2063,9 +2063,9 @@ HKDF - HMAC-based Key Derivation Function. Генератор ключей на 
 #### gunzip
 
 ```
-function gunzip_init(windowBits)
+function gunzip_init([windowBits])
 function gunzip_end(zstream)
-function gunzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_size)
+function gunzip_inflate(zstream, compressed_data[, expected_uncompressed_chunk_size])
 ```
 
 * gunzip_init создает и возвращает контекст gzip потока для последующих вызовов других функций. Значение windowBits см. в документации по zlib (по умолчанию 47).
@@ -2076,9 +2076,9 @@ function gunzip_inflate(zstream, compressed_data, expected_uncompressed_chunk_si
 #### gzip
 
 ```
-function gzip_init(windowBits, level, memlevel)
+function gzip_init([windowBits[, level[, memlevel]]])
 function gzip_end(zstream)
-function gzip_deflate(zstream, uncompressed_data, expected_compressed_chunk_size)
+function gzip_deflate(zstream, uncompressed_data[, expected_compressed_chunk_size])
 ```
 
 * gzip_init создает и возвращает контекст gzip потока для последующих вызовов других функций. Значение windowBits см. в документации по zlib (по умолчанию 31). level - уровень сжатия от 1 до 9 (по умолчанию 9), memlevel - допустимый уровень использования памяти от 1 до 8 (по умолчанию 8).
@@ -2367,7 +2367,7 @@ function resolve_range(blob,l7payload_type,marker_list[,strict,zero_based_pos])
 #### tls_mod
 
 ```
-function tls_mod(blob, modlist, payload)
+function tls_mod(blob, modlist[, payload])
 ```
 
 - blob - блоб, с которым производится действие
@@ -2388,7 +2388,7 @@ function tls_mod(blob, modlist, payload)
 #### instance_cutoff
 
 ```
-function instance_cutoff(ctx, outgoing)
+function instance_cutoff(ctx[, outgoing])
 ```
 
 Добровольное само-отсечение инстанса по выбранному направлению.
@@ -2401,7 +2401,7 @@ function instance_cutoff(ctx, outgoing)
 #### lua_cutoff
 
 ```
-function lua_cutoff(ctx, outgoing)
+function lua_cutoff(ctx[, outgoing])
 ```
 
 Аналогично `instance_cutoff`, но от потока отсекается весь профиль.
@@ -2626,8 +2626,8 @@ pattern - это часть условно бесконечно повторяю
 ### blob
 
 ```
-function blob(desync, name, def)
-function blob_or_def(desync, name, def)
+function blob(desync, name[, def])
+function blob_or_def(desync, name[, def])
 ```
 
 - blob - стандартная функция получения блоба. Если name начинается с `0x`, то дальнейшее интерпретируется как HEX строка.
@@ -2667,9 +2667,9 @@ function is_retransmission(desync)
 ## Обслуживание позиций
 
 ```
-function pos_counter_overflow(desync, mode, reverse)
+function pos_counter_overflow(desync, mode[, reverse])
 function pos_get_pos(track_pos, mode)
-function pos_get(desync, mode, reverse)
+function pos_get(desync, mode[, reverse])
 function pos_check_from(desync, range)
 function pos_check_to(desync, range)
 function pos_check_range(desync, range)
@@ -3235,7 +3235,7 @@ function fix_ip_proto(dis, proto)
 
 ```
 function l3_base_len(dis)
-function l3_extra_len(dis, ip6_exthdr_last_idx)
+function l3_extra_len(dis[, ip6_exthdr_last_idx])
 function l3_len(dis)
 function l4_base_len(dis)
 function l4_extra_len(dis)
@@ -3262,7 +3262,7 @@ function packet_len(dis)
 ### genhost
 
 ```
-function genhost(len, template)
+function genhost(len[, template])
 ```
 
 Генерирует случайный хост длиной len.
@@ -3314,7 +3314,7 @@ function readfile(filename)
 Читает весь файл. Вызывается error в случае ошибки при открытии или чтении файла.
 
 ```
-function z_readfile(filename, expected_ratio)
+function z_readfile(filename[, expected_ratio])
 ```
 
 Автоматически определяет является ли файл gzip. Если да - разжимает, если нет - читает без изменений. Вызывается error в случае ошибки при открытии или чтении файла.
@@ -3336,14 +3336,14 @@ function is_gzip_file(filename)
 true, если файл является gzip, иначе false. При ошибке открытия файла вызывается error.
 
 ```
-function gunzip_file(filename, expected_ratio, read_block_size)
+function gunzip_file(filename[, expected_ratio[, read_block_size]])
 ```
 
 Разжимает файл и возвращает raw string. В случае ошибки открытия или чтения файла вызывается error. При нехватке памяти возвращается nil. read_block_size - частями какого размера читается файл (по умолчанию 16K).
 expected_ratio - ожидаемое соотношение длины разжатых данных к длине сжатых данных (по умолчанию 4).
 
 ```
-function gzip_file(filename, data, expected_ratio, level, memlevel, compress_block_size)
+function gzip_file(filename, data[, expected_ratio[, level[, memlevel[, compress_block_size]]]])
 ```
 
 Сжимает raw строку в gzip файл. В случае ошибки открытия или чтения файла вызывается error. При испорченных gzip данных или нехватке памяти возвращается nil.
@@ -3450,7 +3450,7 @@ tcp_ts_up дублирует старое поведение - двигает ti
 ### apply_ip_id
 
 ```
-function apply_ip_id(desync, dis, ipid_options, def)
+function apply_ip_id(desync[, dis[, ipid_options[, def]]])
 ```
 
 Применить [политику ip_id](#standard-ipid) из ipid_options к диссекту dis.
@@ -3461,7 +3461,7 @@ def содержит режим назначения по умолчанию. Е
 ### apply_fooling
 
 ```
-function apply_fooling(desync, dis, fooling_options)
+function apply_fooling(desync[, dis[, fooling_options]])
 ```
 
 Применяет набор модификаций L3/L4 заголовков ([фулинг](#standard-fooling)), описанный в fooling_options, к диссекту dis.
@@ -3535,7 +3535,7 @@ function ip2ifname(ip)
 ### rawsend_dissect_ipfrag
 
 ```
-function rawsend_dissect_ipfrag(dis, options)
+function rawsend_dissect_ipfrag(dis[, options])
 ```
 
 Отправить диссект dis с IP фрагментацией, заданной в `options.ipfrag`. Если отсутствует - отправить без фрагментации.
@@ -3545,7 +3545,7 @@ function rawsend_dissect_ipfrag(dis, options)
 ### rawsend_dissect_segmented
 
 ```
-function rawsend_dissect_segmented(desync, dis, mss, options)
+function rawsend_dissect_segmented(desync[, dis[, mss[, options]]])
 ```
 
 Отправить диссект dis с автоматической tcp сегментацией на базе mss с применением `options.fooling` и `options.ipid`.
@@ -3558,7 +3558,7 @@ ipid применяется к каждому фрагменту. Для udp с�
 ### rawsend_payload_segmented
 
 ```
-function rawsend_payload_segmented(desync, payload, seq, options)
+function rawsend_payload_segmented(desync[, payload[, seq[, options]]])
 ```
 
 Сконструировать временный диссект на базе desync.dis с опциональным замещением пейлоада на payload и опциональным смещением seq, применяя options, и отослать через rawsend_dissect_segmented.
@@ -3574,8 +3574,8 @@ mss берется из desync.tcp_mss.
 ## Стандартные фильтры direction и payload
 
 ```
-function direction_check(desync, def)
-function direction_cutoff_opposite(ctx, desync, def)
+function direction_check(desync[, def])
+function direction_cutoff_opposite(ctx, desync[, def])
 ```
 
 Фильтр по направлению представляет собой строку "in", "out" или "any" и передается в desync.arg.dir. Если аргумент отсутствует, берется значение def.
@@ -3584,8 +3584,8 @@ function direction_cutoff_opposite(ctx, desync, def)
 - direction_cutoff_opposite выполняет [instance cutoff](#instance_cutoff) на текущее направление, если оно не соответствует фильтру.
 
 ```
-function payload_match_filter(l7payload, l7payload_filter, def)
-function payload_check(desync, def)
+function payload_match_filter(l7payload[, l7payload_filter[, def]])
+function payload_check(desync[, def])
 ```
 
 Функции работают со строкой - списком пейлоадов через запятую. Особые значения - all и known. all означает любой пейлоад, known - не unknown и не empty. Префикс `~` в начале означает логическую инверсию - несоответствие списку.
@@ -3630,7 +3630,7 @@ function replay_drop(desync)
 ### instance_cutoff_shim
 
 ```
-function instance_cutoff_shim(ctx, desync, dir)
+function instance_cutoff_shim(ctx, desync[, dir])
 ```
 
 Выполняет обычный [instance cutoff](#instance_cutoff) по направлению dir, если ctx присутствует, иначе cutoff через дублирующий механизм,
