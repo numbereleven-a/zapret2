@@ -1539,7 +1539,7 @@ end
 
 -- checks if filename is gzip compressed
 function is_gzip_file(filename)
-	local f, err = io.open(filename, "r")
+	local f, err = io.open(filename, "rb")
 	if not f then
 		error("is_gzip_file: "..err)
 	end
@@ -1550,7 +1550,7 @@ end
 -- ungzip file to raw string
 -- expected_ratio = uncompressed_size/compressed_size (default 4)
 function gunzip_file(filename, expected_ratio, read_block_size)
-	local f, err = io.open(filename, "r")
+	local f, err = io.open(filename, "rb")
 	if not f then
 		error("gunzip_file: "..err)
 	end
@@ -1590,7 +1590,7 @@ end
 -- level : 1..9 (default 9)
 -- memlevel : 1..8 (default 8)
 function gzip_file(filename, data, expected_ratio, level, memlevel, compress_block_size)
-	local f, err = io.open(filename, "w")
+	local f, err = io.open(filename, "wb")
 	if not f then
 		error("gzip_file: "..err)
 	end
@@ -1619,7 +1619,7 @@ function gzip_file(filename, data, expected_ratio, level, memlevel, compress_blo
 end
 -- reads the whole file
 function readfile(filename)
-	local f, err = io.open(filename, "r")
+	local f, err = io.open(filename, "rb")
 	if not f then
 		error("readfile: "..err)
 	end
@@ -1637,7 +1637,7 @@ function z_readfile(filename, expected_ratio)
 end
 -- write data to filename
 function writefile(filename, data)
-	local f, err = io.open(filename, "w")
+	local f, err = io.open(filename, "wb")
 	if not f then
 		error("writefile: "..err)
 	end

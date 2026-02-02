@@ -1644,6 +1644,7 @@ static const uint8_t *dns_extract_name(const uint8_t *a, const uint8_t *b, const
 
 	if (bptr)
 	{
+		if (a>=e) return NULL;
 		// name pointer
 		off = (*a & 0x3F)<<8 | a[1];
 		p = b + off;
@@ -1929,14 +1930,13 @@ static uint8_t dpi_desync_icmp_packet(
 	if (pkt_attached)
 	{
 		struct dissect adis;
-
 		len_attached = pkt_attached - dis->data_payload + dis->len_payload;
 		proto_dissect_l3l4(pkt_attached, len_attached, &adis, true); // dissect without payload length checks - can be partial
-		if (!dis->ip && !dis->ip6)
+		if (!adis.ip && !adis.ip6)
 			DLOG("attached packet is invalid\n");
 		else
 		{
-			l7payload = dis->ip ? L7P_IPV4 : L7P_IPV6;
+			l7payload = adis.ip ? L7P_IPV4 : L7P_IPV6;
 			DLOG("attached packet\n");
 			packet_debug(false, &adis);
 			if (ConntrackPoolDoubleSearch(&params.conntrack, &adis, &ctrack, &bReverse))

@@ -1164,7 +1164,7 @@ Lua код выполняется с ограниченными правами, 
 Они бывают трех видов - `--payload`, `--in-range`, `--out-range`.
 Значения фильтров действуют с момента их указания до следующего переопределения.
 
-- `--payload=type1[,type2][,type2]...` принимает список известных пейлоадов через зяпятую, "all" или "known". [Список известных пейлоадов](#распознавание-протоколов). По умолчанию `--payload=all`.
+- `--payload=type1[,type2][,type3]...` принимает список известных пейлоадов через зяпятую, "all" или "known". [Список известных пейлоадов](#распознавание-протоколов). По умолчанию `--payload=all`.
 - `--(in-range|out-range)=[(n|a|d|s|p)<int>](-|<)[(n|a|d|s|p)<int>]` задает диапазоны счетчиков conntrack по входящему и исходящему направлениям. По умолчанию `--in-range=x`, `--out-range=a`.
 
 Диапазоны задаются в формах : `mX-mY`, `mX<mY`, `-mY`, `<mY`, `mX-`, где m - режим счетчика, X - нижнее значение, Y - верхнее значение.
@@ -1196,7 +1196,7 @@ nfqws2 следит за превышением верхней границы с
 
 ```
 --filter-tcp=80,443 --filter-l7=http,tls
---out-range=-s34228 and
+--out-range=-s34228
 --in-range=-s5556 --lua-desync=circular
 --in-range=x
 --payload=tls_client_hello
@@ -1486,8 +1486,6 @@ desync
 | func_instance      | string | название инстанса                                                                            | производная имени функции, номера инстанса и номера профиля |
 | profile_n          | number | номер профиля                                                                                |                                                             |
 | profile_name       | string | название профиля                                                                             | может отсутствовать                                         |
-| template_n         | number | номер шаблона, на базе которого создан профиль                                               | может отсутствовать                                         |
-| template_name      | string | название шаблона, на базе которого создан профиль                                            | может отсутствовать                                         |
 | cookie             | string | значение параметра nfqws2 --cookie для профиля                                               | может отсутствовать                                         |
 | outgoing           | bool   | true , если направление исходящее                                                            |                                                             |
 | ifin               | string | имя входящего интерфейса                                                                     | может отсутствовать                                         |
@@ -1591,7 +1589,7 @@ ipv6 extension headers и tcp options представляются в форме
 | th_dport | порт приемника                                                                                                |
 | th_x2    | зарезервированное поле. используется для расширенных tcp flags                                                |
 | th_off   | размер tcp хедера в блоках по 4 байта                                                                         |
-| th_flags | tcp флаги : TH_FIN,TH_SYN,TH_RST,TH_PUSH,TH_ACK,TH_FIN,TH_URG,TH_ECE,TH_CWR                                   |
+| th_flags | tcp флаги : TH_FIN,TH_SYN,TH_RST,TH_PUSH,TH_ACK,TH_URG,TH_ECE,TH_CWR                                          |
 | th_seq   | sequence number                                                                                               |
 | th_ack   | acknowledgement number                                                                                        |
 | th_win   | размер tcp окна                                                                                               |
@@ -1766,7 +1764,7 @@ desync.track всегда отсутствует.
 | IPV6_FLOWLABEL_MASK  | number | flow label в ip6_flow                                                                            | 0x000FFFFF                                          |
 | IPV6_FLOWINFO_MASK  | number | flow label, traffic class в ip6_flow                                                             | 0x0FFFFFFF                                          |
 | IPPROTO_IP<br>IPPROTO_IPV6<br>IPPROTO_IPIP<br>IPPROTO_ICMP<br>IPPROTO_ICMPV6<br>IPPROTO_TCP<br>IPPROTO_UDP<br>IPPROTO_SCTP<br>IPPROTO_HOPOPTS<br>IPPROTO_ROUTING<br>IPPROTO_FRAGMENT<br>IPPROTO_AH<br>IPPROTO_ESP<br>IPPROTO_DSTOPTS<br>IPPROTO_MH<br>IPPROTO_HIP<br>IPPROTO_SHIM6<br>IPPROTO_NONE | number | [номера IP протоколов](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml) | используются в ipv4 и ipv6                          |
-| ICMP_ECHOREPLY<br>ICMP_DEST_UNREACH<br>ICMP_REDIRECT<br>ICMP_ECHO<br>ICMP_TIME_EXCEEDED<brICMP_PARAMETERPROB<br>ICMP_TIMESTAMP<br>ICMP_TIMESTAMPREPLY<br>ICMP_INFO_REQUEST<br>ICMP_INFO_REPLY | number | [типы icmp](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) |
+| ICMP_ECHOREPLY<br>ICMP_DEST_UNREACH<br>ICMP_REDIRECT<br>ICMP_ECHO<br>ICMP_TIME_EXCEEDED<br>ICMP_PARAMETERPROB<br>ICMP_TIMESTAMP<br>ICMP_TIMESTAMPREPLY<br>ICMP_INFO_REQUEST<br>ICMP_INFO_REPLY | number | [типы icmp](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) |
 | ICMP_UNREACH_NET<br>ICMP_UNREACH_HOST<br>ICMP_UNREACH_PROTOCOL<br>ICMP_UNREACH_PORT<br>ICMP_UNREACH_NEEDFRAG<br>ICMP_UNREACH_SRCFAIL<br>ICMP_UNREACH_NET_UNKNOWN<br>ICMP_UNREACH_HOST_UNKNOWN<br>ICMP_UNREACH_NET_PROHIB<br>ICMP_UNREACH_HOST_PROHIB<br>ICMP_UNREACH_TOSNET<br>ICMP_UNREACH_TOSHOST<br>ICMP_UNREACH_FILTER_PROHIB<br>ICMP_UNREACH_HOST_PRECEDENCE<br>ICMP_UNREACH_PRECEDENCE_CUTOFF | number | коды icmp для destination unreachable |
 | ICMP_REDIRECT_NET<br>ICMP_REDIRECT_HOST<br>ICMP_REDIRECT_TOSNET<br>ICMP_REDIRECT_TOSHOST | number | коды icmp для icmp redirect |
 | ICMP_TIMXCEED_INTRANS<br>ICMP_TIMXCEED_REASS | number | коды icmp для time exceeded |

@@ -1337,7 +1337,7 @@ bool IsQUICInitial(const uint8_t *data, size_t len)
 	// quic v2 : initial packets are 01b
 	if ((data[0] & 0x30) != (is_quic_v2(ver) ? 0x10 : 0x00)) return false;
 
-	uint64_t offset=5, sz;
+	uint64_t offset=5, sz, sz2;
 
 	// DCID
 	if (data[offset] > QUIC_MAX_CID_LENGTH) return false;
@@ -1353,9 +1353,10 @@ bool IsQUICInitial(const uint8_t *data, size_t len)
 	if (offset >= len) return false;
 
 	// payload length
-	if ((offset + tvb_get_size(data[offset])) > len) return false;
+	sz2 = tvb_get_size(data[offset]);
+	if ((offset + sz2) > len) return false;
 	tvb_get_varint(data + offset, &sz);
-	offset += sz;
+	offset += sz2 + sz;
 	if (offset > len) return false;
 
 	return true;

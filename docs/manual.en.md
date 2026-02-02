@@ -1034,7 +1034,7 @@ Direct file operations from Lua code are not recommended unless absolutely neces
 
 These come in three types: `--payload`, `--in-range`, and `--out-range`. Filter values remain active from the moment they are specified until the next override.
 
-- `--payload=type1[,type2][,type2]...` accepts a comma-separated list of known [payloads](#protocol-detection), "all", or "known". The default is `--payload=all`.
+- `--payload=type1[,type2][,type3]...` accepts a comma-separated list of known [payloads](#protocol-detection), "all", or "known". The default is `--payload=all`.
 - `--(in-range|out-range)=[(n|a|d|s|p)<int>](-|<)[(n|a|d|s|p)<int>]` sets conntrack counter ranges for inbound and outbound directions. The default is `--in-range=x`, `--out-range=a`.
 
 Ranges are specified in the following formats: `mX-mY`, `mX<mY`, `-mY`, `<mY`, `mX-`, where `m` is the counter mode, `X` is the lower bound, and `Y` is the upper bound. Modes `x` and `a` are specified as a single letter without a range or counter value. The `-` sign indicates an inclusive upper bound, while `<` indicates an exclusive one.
@@ -1061,7 +1061,7 @@ The following example demonstrates a setup where we attempt to use specific "fak
 
 ```
 --filter-tcp=80,443 --filter-l7=http,tls
---out-range=-s34228 and
+--out-range=-s34228
 --in-range=-s5556 --lua-desync=circular
 --in-range=x
 --payload=tls_client_hello
@@ -1344,8 +1344,6 @@ desync
 | func_instance | string | instance name | derived from the function name, instance number, and profile number |
 | profile_n | number | profile number | |
 | profile_name | string | profile name | optional |
-| template_n | number | number of the template the profile is based on | optional |
-| template_name | string | name of the template the profile is based on | optional |
 | cookie | string | value of the nfqws2 --cookie parameter for the profile | optional |
 | outgoing | bool | true if the direction is outgoing | |
 | ifin | string | incoming interface name | optional |
@@ -1449,7 +1447,7 @@ All multi-byte numeric values are automatically converted from network byte orde
 | th_dport | destination port                                                                                              |
 | th_x2    | reserved field; used for extended TCP flags                                                                   |
 | th_off   | TCP header size in 4-byte blocks                                                                              |
-| th_flags | TCP flags: TH_FIN, TH_SYN, TH_RST, TH_PUSH, TH_ACK, TH_FIN, TH_URG, TH_ECE, TH_CWR                             |
+| th_flags | TCP flags: TH_FIN, TH_SYN, TH_RST, TH_PUSH, TH_ACK, TH_URG, TH_ECE, TH_CWR                                    |
 | th_seq   | sequence number                                                                                               |
 | th_ack   | acknowledgement number                                                                                        |
 | th_win   | TCP window size                                                                                               |
@@ -1621,12 +1619,12 @@ Before executing `--lua-init`, the C code sets up base constants, blobs, and C f
 | IPV6_FLOWLABEL_MASK | number | flow label in ip6_flow | 0x000FFFFF |
 | IPV6_FLOWINFO_MASK | number | flow label and traffic class in ip6_flow | 0x0FFFFFFF  |
 | IPPROTO_IP<br>IPPROTO_IPV6<br>IPPROTO_ICMP<br>IPPROTO_ICMPV6<br>IPPROTO_TCP<br>IPPROTO_UDP<br>IPPROTO_SCTP<br>IPPROTO_HOPOPTS<br>IPPROTO_ROUTING<br>IPPROTO_FRAGMENT<br>IPPROTO_AH<br>IPPROTO_ESP<br>IPPROTO_DSTOPTS<br>IPPROTO_MH<br>IPPROTO_HIP<br>IPPROTO_SHIM6<br>IPPROTO_NONE | number | [IP protocol numbers](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml) | used in IPv4 and IPv6 |
-| ICMP_ECHOREPLY<br>ICMP_DEST_UNREACH<br>ICMP_REDIRECT<br>ICMP_ECHO<br>ICMP_TIME_EXCEEDED<brICMP_PARAMETERPROB<br>ICMP_TIMESTAMP<br>ICMP_TIMESTAMPREPLY<br>ICMP_INFO_REQUEST<br>ICMP_INFO_REPLY | number | [icmp types](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) |
+| ICMP_ECHOREPLY<br>ICMP_DEST_UNREACH<br>ICMP_REDIRECT<br>ICMP_ECHO<br>ICMP_TIME_EXCEEDED<br>ICMP_PARAMETERPROB<br>ICMP_TIMESTAMP<br>ICMP_TIMESTAMPREPLY<br>ICMP_INFO_REQUEST<br>ICMP_INFO_REPLY | number | [icmp types](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) |
 | ICMP_UNREACH_NET<br>ICMP_UNREACH_HOST<br>ICMP_UNREACH_PROTOCOL<br>ICMP_UNREACH_PORT<br>ICMP_UNREACH_NEEDFRAG<br>ICMP_UNREACH_SRCFAIL<br>ICMP_UNREACH_NET_UNKNOWN<br>ICMP_UNREACH_HOST_UNKNOWN<br>ICMP_UNREACH_NET_PROHIB<br>ICMP_UNREACH_HOST_PROHIB<br>ICMP_UNREACH_TOSNET<br>ICMP_UNREACH_TOSHOST<br>ICMP_UNREACH_FILTER_PROHIB<br>ICMP_UNREACH_HOST_PRECEDENCE<br>ICMP_UNREACH_PRECEDENCE_CUTOFF | number | icmp codes for destination unreachable |
 | ICMP_REDIRECT_NET<br>ICMP_REDIRECT_HOST<br>ICMP_REDIRECT_TOSNET<br>ICMP_REDIRECT_TOSHOST | number | icmp codes for redirect |
 | ICMP_TIMXCEED_INTRANS<br>ICMP_TIMXCEED_REASS | number | icmp codes for time exceeded |
 | ICMP6_ECHO_REQUEST<br>ICMP6_ECHO_REPLY<br>ICMP6_DST_UNREACH<br>ICMP6_PACKET_TOO_BIG<br>ICMP6_TIME_EXCEEDED<br>ICMP6_PARAM_PROB<br>MLD_LISTENER_QUERY<br>MLD_LISTENER_REPORT<br>MLD_LISTENER_REDUCTION<br>ND_ROUTER_SOLICIT<br>ND_ROUTER_ADVERT<br>ND_NEIGHBOR_SOLICIT<br>ND_NEIGHBOR_ADVERT<br>ND_REDIRECT | number | [icmpv6 types](https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml) |
-| ICMP6_DST_UNREACH_NOROUTE<br>ICMP6_DST_UNREACH_ADMIN<br>ICMP6_DST_UNREACH_BEYONDSCOPE<br>ICMP6_DST_UNREACH_ADDR<br>ICMP6_DST_UNREACH_NOPORT | number | коды icmpv6 для destination unreachable |
+| ICMP6_DST_UNREACH_NOROUTE<br>ICMP6_DST_UNREACH_ADMIN<br>ICMP6_DST_UNREACH_BEYONDSCOPE<br>ICMP6_DST_UNREACH_ADDR<br>ICMP6_DST_UNREACH_NOPORT | number | icmpv6 codes for destination unreachable |
 | ICMP6_TIME_EXCEED_TRANSIT<br>ICMP6_TIME_EXCEED_REASSEMBLY | number | icmpv6 codes for time exceeded |
 | ICMP6_PARAMPROB_HEADER<br>ICMP6_PARAMPROB_NEXTHEADER<br>ICMP6_PARAMPROB_OPTION | number | icmpv6 codes for parameter problem |
 
