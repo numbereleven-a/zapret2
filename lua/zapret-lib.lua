@@ -174,12 +174,12 @@ function apply_execution_plan(desync, instance)
 end
 -- produce resulting verdict from 2 verdicts
 function verdict_aggregate(v1, v2)
-	local v
-	local vn = bitor(bitand(v1,VERDICT_PRESERVE_NEXT),bitand(v2,VERDICT_PRESERVE_NEXT))
-	v1 = bitand(v1, VERDICT_MASK)
-	v2 = bitand(v2, VERDICT_MASK)
 	v1 = v1 or VERDICT_PASS
 	v2 = v2 or VERDICT_PASS
+	local vn = bitor(bitand(v1,VERDICT_PRESERVE_NEXT),bitand(v2,VERDICT_PRESERVE_NEXT))
+	local v
+	v1 = bitand(v1, VERDICT_MASK)
+	v2 = bitand(v2, VERDICT_MASK)
 	if v1==VERDICT_DROP or v2==VERDICT_DROP then
 		v=VERDICT_DROP
 	elseif v1==VERDICT_MODIFY or v2==VERDICT_MODIFY then
