@@ -1524,7 +1524,7 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 			case IPPROTO_MH: // mobility header
 			case IPPROTO_HIP: // Host Identity Protocol Version v2
 			case IPPROTO_SHIM6:
-				if (len < 2) return; // error
+				if (len < 2) goto end; // error
 				hdrlen = 8 + (data[1] << 3);
 				break;
 			case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
@@ -1532,7 +1532,7 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 				break;
 			case IPPROTO_AH:
 				// special case. length in ah header is in 32-bit words minus 2
-				if (len < 2) return; // error
+				if (len < 2) goto end; // error
 				hdrlen = 8 + (data[1] << 2);
 				break;
 			case IPPROTO_NONE: // no next header
