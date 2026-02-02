@@ -1222,7 +1222,8 @@ static bool wf_make_l3(char *opt, bool *ipv4, bool *ipv6)
 {
 	char *e, *p, c;
 
-	for (p = opt, *ipv4 = *ipv6 = false; p; )
+	// do not overwrite ipv4 and ipv6 old values. OR instead - simulate adding to the list
+	for (p = opt; p; )
 	{
 		if ((e = strchr(p, ',')))
 		{
@@ -1343,8 +1344,11 @@ static void LuaDesyncDebug(struct desync_profile *dp, const char *entity)
 	}
 }
 
-static bool deny_proto_filters(struct desync_profile *dp)
+static bool filter_defaults(struct desync_profile *dp)
 {
+	// enable both ipv4 and ipv6 if not specified
+	if (!dp->b_filter_l3) dp->filter_ipv4 = dp->filter_ipv6 = true;
+
 	// if any filter is set - deny all unset
 	if (!LIST_EMPTY(&dp->pf_tcp) || !LIST_EMPTY(&dp->pf_udp) || !LIST_EMPTY(&dp->icf) || !LIST_EMPTY(&dp->ipf))
 	{
@@ -2931,7 +2935,7 @@ int main(int argc, char **argv)
 				DLOG_ERR("could not make '%s' accessible. auto hostlist file may not be writable after privilege drop\n", dp->hostlist_auto->filename);
 
 		}
-		if (!deny_proto_filters(dp)) exit_clean(1);
+		if (!filter_defaults(dp)) exit_clean(1);
 		LuaDesyncDebug(dp,"profile");
 	}
 	LIST_FOREACH(dpl, &params.desync_templates, next)

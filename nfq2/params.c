@@ -356,7 +356,6 @@ void dp_init(struct desync_profile *dp)
 	dp->hostlist_auto_incoming_maxseq = HOSTLIST_AUTO_INCOMING_MAXSEQ;
 	dp->hostlist_auto_udp_out = HOSTLIST_AUTO_UDP_OUT;
 	dp->hostlist_auto_udp_in = HOSTLIST_AUTO_UDP_IN;
-	dp->filter_ipv4 = dp->filter_ipv6 = true;
 }
 static void dp_clear_dynamic(struct desync_profile *dp)
 {
@@ -428,9 +427,17 @@ bool dp_copy(struct desync_profile *to, const struct desync_profile *from)
 	DP_COPY_SIMPLE(filter_l7)
 	if (from->b_filter_l3)
 	{
-		to->filter_ipv4 = from->filter_ipv4;
-		to->filter_ipv6 = from->filter_ipv6;
-		to->b_filter_l3 = true;
+		if (to->b_filter_l3)
+		{
+			to->filter_ipv4 |= from->filter_ipv4;
+			to->filter_ipv6 |= from->filter_ipv6;
+		}
+		else
+		{
+			to->filter_ipv4 = from->filter_ipv4;
+			to->filter_ipv6 = from->filter_ipv6;
+			to->b_filter_l3 = true;
+		}
 	}
 
 	// copy dynamic structures
