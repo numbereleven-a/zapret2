@@ -1981,7 +1981,7 @@ If successful returns the following table :
 
 | Field    | Type   | Description |
 | :------- | :----- | :---------- |
-| type     | string | file type : file, dir, symlink, socket, blockdev, chardev, fifo, unknown |
+| type     | string | file type : file, dir,  socket, blockdev, chardev, fifo, unknown |
 | size     | number | file size |
 | mtime    | number | modification unixtime in floating point format |
 | inode    | number | inode. In Windows doesn't fit into number datatype in luajit but fits into integer datatype of Lua5.3+ |

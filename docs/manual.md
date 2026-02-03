@@ -2128,7 +2128,7 @@ function stat(filename)
 
 | Поле     | Тип    | Описание    |
 | :------- | :----- | :---------- |
-| type     | string | тип файла : file, dir, symlink, socket, blockdev, chardev, fifo, unknown |
+| type     | string | тип файла : file, dir, socket, blockdev, chardev, fifo, unknown |
 | size     | number | размер файла |
 | mtime    | number | unixtime время модификации в формате с плавающей точкой |
 | inode    | number | inode. на Windows не влезает в тип number luajit, но влезает в integer Lua 5.3+ |
