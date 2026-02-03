@@ -846,7 +846,22 @@ static int luacall_clock_gettime(lua_State *L)
 		lua_pushlint(L, ts.tv_sec);
 		lua_pushinteger(L, ts.tv_nsec);
 	}
+
 	LUA_STACK_GUARD_RETURN(L,2)
+}
+static int luacall_clock_getfloattime(lua_State *L)
+{
+	lua_check_argc(L,"clock_getfloattime", 0);
+
+	LUA_STACK_GUARD_ENTER(L)
+
+	struct timespec ts;
+	if (clock_gettime(CLOCK_REALTIME, &ts))
+		lua_pushnil(L);
+	else
+		lua_pushnumber(L, ts.tv_sec + ts.tv_nsec/1000000000.);
+
+	LUA_STACK_GUARD_RETURN(L,1)
 }
 
 static void lua_mt_init_desync_ctx(lua_State *L)
@@ -1415,7 +1430,7 @@ void lua_push_icmphdr(lua_State *L, const struct icmp46 *icmp, size_t len)
 		lua_pushf_int(L,"icmp_type",icmp->icmp_type);
 		lua_pushf_int(L,"icmp_code",icmp->icmp_code);
 		lua_pushf_int(L,"icmp_cksum",ntohs(icmp->icmp_cksum));
-		lua_pushf_int(L,"icmp_data",ntohl(icmp->icmp_data32));
+		lua_pushf_lint(L,"icmp_data",ntohl(icmp->icmp_data32));
 	}
 	else
 		lua_pushnil(L);
@@ -2305,7 +2320,7 @@ bool lua_reconstruct_icmphdr(lua_State *L, int idx, struct icmp46 *icmp)
 
 	lua_getfield(L,idx,"icmp_data");
 	if (lua_type(L,-1)!=LUA_TNUMBER) goto err;
-	icmp->icmp_data32 = htonl((uint32_t)lua_tointeger(L,-1));
+	icmp->icmp_data32 = htonl((uint32_t)lua_tolint(L,-1));
 	lua_pop(L, 1);
 
 	lua_getfield(L,idx,"icmp_cksum");
@@ -3568,6 +3583,51 @@ zerr:
 	goto end;
 }
 
+
+static int luacall_stat(lua_State *L)
+{
+	// stat(filename) return stat_table or nil,strerror,errno
+	lua_check_argc(L,"stat",1);
+
+	int n=1;
+	struct stat st;
+	if (stat(luaL_checkstring(L,1), &st))
+	{
+		lua_pushnil(L);
+		const char *err = strerror(errno);
+		if (err)
+		{
+			lua_pushstring(L,err);
+			lua_pushinteger(L,errno);
+			return 3;
+		}
+	}
+	else
+	{
+		lua_createtable(L, 0, 5);
+		lua_pushf_lint(L,"dev", st.st_dev);
+		lua_pushf_lint(L,"inode", st.st_ino);
+		lua_pushf_lint(L,"size", st.st_size);
+		lua_pushf_number(L,"mtime", st.st_mtim.tv_sec + st.st_mtim.tv_nsec/1000000000.);
+
+		const char *ftype;
+		switch(st.st_mode & S_IFMT)
+		{
+			case S_IFREG: ftype="file"; break;
+			case S_IFDIR: ftype="dir"; break;
+			case S_IFLNK: ftype="symlink"; break;
+			case S_IFSOCK: ftype="socket"; break;
+			case S_IFBLK: ftype="blockdev"; break;
+			case S_IFCHR: ftype="chardev"; break;
+			case S_IFIFO: ftype="fifo"; break;
+			default: ftype="unknown"; break;
+		}
+
+		lua_pushf_str(L, "type", ftype);
+	}
+	return 1;
+}
+
 // ----------------------------------------
 
 void lua_cleanup(lua_State *L)
@@ -4029,7 +4089,6 @@ static void lua_init_const(void)
 		{"ICMP6_PARAMPROB_HEADER",ICMP6_PARAMPROB_HEADER},
 		{"ICMP6_PARAMPROB_NEXTHEADER",ICMP6_PARAMPROB_NEXTHEADER},
 		{"ICMP6_PARAMPROB_OPTION",ICMP6_PARAMPROB_OPTION}
-
 	};
 	DLOG("\nLUA NUMERIC:");
 	for (int i=0;i<sizeof(cuint)/sizeof(*cuint);i++)
@@ -4161,6 +4220,7 @@ static void lua_init_functions(void)
 		// system functions
 		{"uname",luacall_uname},
 		{"clock_gettime",luacall_clock_gettime},
+		{"clock_getfloattime",luacall_clock_getfloattime},
 		{"getpid",luacall_getpid},
 		{"gettid",luacall_gettid},
 
@@ -4209,7 +4269,10 @@ static void lua_init_functions(void)
 		// gzip compress
 		{"gzip_init",luacall_gzip_init},
 		{"gzip_end",luacall_gzip_end},
-		{"gzip_deflate",luacall_gzip_deflate}
+		{"gzip_deflate",luacall_gzip_deflate},
+
+		// stat() - file size, mod time
+		{"stat",luacall_stat}
 	};
 	for(int i=0;i<(sizeof(lfunc)/sizeof(*lfunc));i++)
 		lua_register(params.L,lfunc[i].name,lfunc[i].f);
