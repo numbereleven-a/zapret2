@@ -24,4 +24,8 @@ ssize_t getrandom(void *ptr, size_t len, unsigned int flags);
 
 #endif
 
+#elif defined(__CYGWIN__)
+
+#include <sys/random.h>
+
 #endif
