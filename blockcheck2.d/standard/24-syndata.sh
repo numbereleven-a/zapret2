@@ -11,7 +11,7 @@ pktws_check_http()
 
 	for split in '' multisplit $MULTIDISORDER; do
 		pktws_curl_test_update "$1" "$2" --lua-desync=syndata ${split:+$PAYLOAD --lua-desync=$split}
-		pktws_curl_test_update "$1" "$2" --lua-desync=syndata:blob=fake_default_http $PAYLOAD ${split:+$PAYLOAD --lua-desync=$split}
+		pktws_curl_test_update "$1" "$2" --lua-desync=syndata:blob=fake_default_http ${split:+$PAYLOAD --lua-desync=$split}
 	done
 }
 

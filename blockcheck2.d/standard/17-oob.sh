@@ -5,9 +5,9 @@ pktws_oob()
 	# $1 - test function
 	# $2 - domain
 
-	local dropacks urp
+	local urp
 	for urp in b 0 2 midsld; do
-		pktws_curl_test_update "$1" "$2" --in-range=-s1 --lua-desync=oob:urp=$urp$dropack
+		pktws_curl_test_update "$1" "$2" --in-range=-s1 --lua-desync=oob:urp=$urp
 	done
 }
 
