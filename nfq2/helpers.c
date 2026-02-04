@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include "helpers.h"
+#include "random.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -10,12 +11,6 @@
 #include <libgen.h>
 #include <errno.h>
 #include <sys/param.h>
-
-#if defined(__ANDROID__)
-#include "andr/random.h"
-#elif defined(__linux__) || defined(__CYGWIN__)
-#include <sys/random.h>
-#endif
 
 #define UNIQ_SORT \
 { \
@@ -479,6 +474,30 @@ void fill_random_az09(uint8_t *p,size_t sz)
 		p[k] = rnd<10 ? rnd+'0' : 'a'+rnd-10;
 	}
 }
+#if defined(__FreeBSD__) && __FreeBSD_version <= 1200000
+#include <sys/sysctl.h>
+int getentropy(void *buf, size_t len)
+{
+    int mib[2];
+    size_t size = len;
+
+    // Check for reasonable length (getentropy limits to 256)
+    if (len > 256) {
+        errno = EIO;
+        return -1;
+    }
+
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_ARND;
+
+    if (sysctl(mib, 2, buf, &size, NULL, 0) == -1) {
+        return -1;
+    }
+
+    return (size == len) ? 0 : -1;
+}
+#endif
+
 bool fill_crypto_random_bytes(uint8_t *p,size_t sz)
 {
 	ssize_t rd;
@@ -626,5 +645,5 @@ const struct in6_addr *mask_from_bitcount6(uint32_t zct)
 time_t boottime(void)
 {
 	struct timespec ts;
-	return clock_gettime(CLOCK_BOOTTIME, &ts) ? 0 : ts.tv_sec;
+	return clock_gettime(CLOCK_BOOT_OR_UPTIME, &ts) ? 0 : ts.tv_sec;
 }

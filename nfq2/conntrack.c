@@ -216,7 +216,7 @@ static void ConntrackFeedPacket(t_ctrack *t, bool bReverse, const struct dissect
 		ConntrackApplyPos(t, bReverse, dis);
 	}
 
-	clock_gettime(CLOCK_BOOTTIME, &t->pos.t_last);
+	clock_gettime(CLOCK_BOOT_OR_UPTIME, &t->pos.t_last);
 	// make sure t_start gets exactly the same value as first t_last
 	if (!t->t_start.tv_sec) t->t_start = t->pos.t_last;
 }
@@ -346,10 +346,10 @@ static void taddr2str(uint8_t l3proto, const t_addr *a, char *buf, size_t bufsiz
 void ConntrackPoolDump(const t_conntrack *p)
 {
 	t_conntrack_pool *t, *tmp;
-	struct timespec tnow;
+	time_t tnow;
 	char sa1[40], sa2[40];
 
-	if (clock_gettime(CLOCK_BOOTTIME, &tnow)) return;
+	if (!(tnow=boottime())) return;
 	HASH_ITER(hh, p->pool, t, tmp) {
 		taddr2str(t->conn.l3proto, &t->conn.src, sa1, sizeof(sa1));
 		taddr2str(t->conn.l3proto, &t->conn.dst, sa2, sizeof(sa2));
@@ -357,7 +357,7 @@ void ConntrackPoolDump(const t_conntrack *p)
 			proto_name(t->conn.l4proto),
 			sa1, t->conn.sport, sa2, t->conn.dport,
 			t->conn.l4proto == IPPROTO_TCP ? connstate_s[t->track.pos.state] : "-",
-			(unsigned long long)t->track.t_start.tv_sec, (unsigned long long)(t->track.pos.t_last.tv_sec - t->track.t_start.tv_sec), (unsigned long long)(tnow.tv_sec - t->track.pos.t_last.tv_sec),
+			(unsigned long long)t->track.t_start.tv_sec, (unsigned long long)(t->track.pos.t_last.tv_sec - t->track.t_start.tv_sec), (unsigned long long)(tnow - t->track.pos.t_last.tv_sec),
 			(unsigned long long)t->track.pos.client.pdcounter, (unsigned long long)t->track.pos.client.pcounter, (unsigned long long)t->track.pos.client.pbcounter,
 			(unsigned long long)t->track.pos.server.pdcounter, (unsigned long long)t->track.pos.server.pcounter, (unsigned long long)t->track.pos.server.pbcounter);
 		if (t->conn.l4proto == IPPROTO_TCP)

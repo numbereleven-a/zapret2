@@ -1,6 +1,14 @@
 #pragma once
 
-#if __ANDROID_API__ < 28
+// shim for old NDK and old gcc linux compilers
+
+#include <sys/syscall.h>
+
+#if defined(__linux__)
+
+#if defined(__ANDROID__) && __ANDROID_API__ < 28 || !defined(SYS_getrandom)
+
+#define NEED_GETRANDOM
 
 #include <sys/types.h>
 
@@ -13,5 +21,7 @@ ssize_t getrandom(void *ptr, size_t len, unsigned int flags);
 #else
 
 #include <sys/random.h>
+
+#endif
 
 #endif

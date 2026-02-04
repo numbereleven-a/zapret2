@@ -1,8 +1,8 @@
-#if __ANDROID_API__ < 28
-
 #include "random.h"
+
+#ifdef NEED_GETRANDOM
+
 #include <unistd.h>
-#include <sys/syscall.h>
 
 #ifndef SYS_getrandom
 
@@ -18,6 +18,9 @@
 
 #elif defined(__i386__)
     #define SYS_getrandom 355
+
+#elif defined(__mips__) && _MIPS_SIM == _MIPS_SIM_ABI32
+    #define SYS_getrandom 4353
 
 #else
     #error "Unsupported architecture: SYS_getrandom not defined"

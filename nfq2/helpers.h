@@ -85,6 +85,10 @@ time_t file_mod_time(const char *filename);
 bool file_size(const char *filename, off_t *size);
 bool file_open_test(const char *filename, int flags);
 
+#if defined(__FreeBSD__) && __FreeBSD_version <= 1200000
+int getentropy(void *buf, size_t len);
+#endif
+
 void fill_random_bytes(uint8_t *p,size_t sz);
 void fill_random_az(uint8_t *p,size_t sz);
 void fill_random_az09(uint8_t *p,size_t sz);
@@ -104,5 +108,13 @@ bool parse_int16(const char *p, int16_t *v);
 uint32_t mask_from_bitcount(uint32_t zct);
 void mask_from_bitcount6_prepare(void);
 const struct in6_addr *mask_from_bitcount6(uint32_t zct);
+
+#ifdef CLOCK_BOOTTIME
+#define CLOCK_BOOT_OR_UPTIME CLOCK_BOOTTIME
+#elif defined(CLOCK_UPTIME)
+#define CLOCK_BOOT_OR_UPTIME CLOCK_UPTIME
+#else
+#define CLOCK_BOOT_OR_UPTIME CLOCK_MONOTINIC
+#endif
 
 time_t boottime(void);
