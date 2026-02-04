@@ -444,6 +444,7 @@ const char *TLSVersionStr(uint16_t tlsver)
 {
 	switch(tlsver)
 	{
+		case 0x0300: return "SSL 3.0";
 		case 0x0301: return "TLS 1.0";
 		case 0x0302: return "TLS 1.1";
 		case 0x0303: return "TLS 1.2";

@@ -5044,7 +5044,7 @@ filter_apply_hostlist_target()
 # $1 - name of the variable containing nfqws2 options
 ```
 
-Replaces the `<HOSTLIST>` and `<HOSTLIST_AUTO>` markers in $1 depending on the [MODE_FILTER](#config-file) and the presence of list files in ipset.
+Replaces the `<HOSTLIST>` and `<HOSTLIST_NOAUTO>` markers in $1 depending on the [MODE_FILTER](#config-file) and the presence of list files in ipset.
 
 ```
 standard_mode_daemons()
