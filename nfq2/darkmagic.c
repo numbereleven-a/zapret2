@@ -178,8 +178,8 @@ void extract_endpoints(const struct ip *ip,const struct ip6_hdr *ip6hdr,const st
 	}
 	else
 	{
-		memset(src,0,sizeof(*src));
-		memset(dst,0,sizeof(*dst));
+		if (src) memset(src,0,sizeof(*src));
+		if (dst) memset(dst,0,sizeof(*dst));
 	}
 }
 

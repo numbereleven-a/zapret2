@@ -413,7 +413,7 @@ ssize_t HttpPos(t_marker posmarker, int16_t pos, const uint8_t *data, size_t sz)
 			if (*method=='\n' || *method=='\r') method++;
 			if (*method=='\n' || *method=='\r') method++;
 			// max length is PROPPATCH
-			for (p=method,i=0;i<9;i++) if (*p>='A' && *p<='Z') p++;
+			for (p=method,i=0; i<9 && *p>='A' && *p<='Z'; i++,p++);
 			if (i<3 || *p!=' ') break;
 			return CheckPos(sz,method-data+pos);
 		case PM_HOST:
