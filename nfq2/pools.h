@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <sys/queue.h>
 #include <net/if.h>
-#include <time.h>
 
 #include "helpers.h"
 #include "filter.h"

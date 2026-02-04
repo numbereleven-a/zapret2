@@ -465,41 +465,41 @@ static int luacall_divint(lua_State *L)
 static int luacall_brandom(lua_State *L)
 {
 	lua_check_argc(L,"brandom",1);
+
+	LUA_STACK_GUARD_ENTER(L)
 	lua_Integer len = luaL_checkinteger(L,1);
 	if (len<0) luaL_error(L, "brandom: invalid arg");
-	uint8_t *p = malloc(len);
-	if (!p) luaL_error(L, "out of memory");
+	uint8_t *p = lua_newuserdata(L, len);
 	fill_random_bytes(p,len);
-	// in out of memory condition this will leave p unfreed
 	lua_pushlstring(L,(char*)p,len);
-	free(p);
-	return 1;
+	lua_remove(L,-2);
+	LUA_STACK_GUARD_RETURN(L,1)
 }
 static int luacall_brandom_az(lua_State *L)
 {
 	lua_check_argc(L,"brandom_az",1);
+
+	LUA_STACK_GUARD_ENTER(L)
 	lua_Integer len = luaL_checkinteger(L,1);
-	if (len<0) luaL_error(L, "brandom_az: invalid arg");
-	uint8_t *p = malloc(len);
-	if (!p) luaL_error(L, "out of memory");
+	if (len<0) luaL_error(L, "brandom: invalid arg");
+	uint8_t *p = lua_newuserdata(L, len);
 	fill_random_az(p,len);
-	// in out of memory condition this will leave p unfreed
 	lua_pushlstring(L,(char*)p,len);
-	free(p);
-	return 1;
+	lua_remove(L,-2);
+	LUA_STACK_GUARD_RETURN(L,1)
 }
 static int luacall_brandom_az09(lua_State *L)
 {
 	lua_check_argc(L,"brandom_az09",1);
+
+	LUA_STACK_GUARD_ENTER(L)
 	lua_Integer len = luaL_checkinteger(L,1);
-	if (len<0) luaL_error(L, "brandom_az09: invalid arg");
-	uint8_t *p = malloc(len);
-	if (!p) luaL_error(L, "out of memory");
+	if (len<0) luaL_error(L, "brandom: invalid arg");
+	uint8_t *p = lua_newuserdata(L, len);
 	fill_random_az09(p,len);
-	// in out of memory condition this will leave p unfreed
 	lua_pushlstring(L,(char*)p,len);
-	free(p);
-	return 1;
+	lua_remove(L,-2);
+	LUA_STACK_GUARD_RETURN(L,1)
 }
 
 // hacky function. breaks immutable string behavior.
@@ -537,16 +537,14 @@ static int luacall_parse_hex(lua_State *L)
 	const char *hex = lua_reqlstring(L,1,&l);
 	if ((l&1)) goto err;
 	l>>=1;
-	uint8_t *p = malloc(l);
-	if (!p) goto err;
+	uint8_t *p = lua_newuserdata(L, l);
 	if (!parse_hex_str(hex,p,&l))
 	{
-		free(p);
+		lua_pop(L,1);
 		goto err;
 	}
-	// in out of memory condition this will leave p unfreed
 	lua_pushlstring(L,(char*)p,l);
-	free(p);
+	lua_remove(L,-2);
 ex:
 	LUA_STACK_GUARD_RETURN(L,1)
 err:
@@ -577,18 +575,15 @@ static int luacall_bcryptorandom(lua_State *L)
 	lua_Integer len = luaL_checkinteger(L,1);
 	if (len<0) luaL_error(L, "bcryptorandom: invalid arg");
 
-	uint8_t *p = malloc(len);
-	if (!p) luaL_error(L, "out of memory");
-
+	uint8_t *p = lua_newuserdata(L, len);
 	if (!fill_crypto_random_bytes(p,len))
 	{
-		free(p);
 		// this is fatal. they expect us to give them crypto secure random blob
-		luaL_error(L, "could not read random data from /dev/random");
+		luaL_error(L, "could not get entropy bytes");
 	}
 
 	lua_pushlstring(L,(char*)p,len);
-	free(p);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -603,13 +598,12 @@ static int luac_bop(lua_State *L, const char *name, void (*op)(const uint8_t *x1
 	const uint8_t *d1 = (const uint8_t*)lua_reqlstring(L,1,&sz1);
 	const uint8_t *d2 = (const uint8_t*)lua_reqlstring(L,2,&sz2);
 	if (sz1!=sz2) luaL_error(L, "string lengths must be the same\n");
-	uint8_t *d3 = malloc(sz1);
-	if (!d3) luaL_error(L, "out of memory");
+	uint8_t *d3 = lua_newuserdata(L, sz1);
 
 	op(d1,d2,d3,sz1);
 
 	lua_pushlstring(L,(char*)d3,sz1);
-	free(d3);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -699,8 +693,7 @@ static int luacall_aes_gcm(lua_State *L)
 	const uint8_t *add = lua_isnoneornil(L,5) ? NULL : (uint8_t*)lua_reqlstring(L,5,&add_len);
 
 	uint8_t atag[16];
-	uint8_t *output = malloc(input_len);
-	if (!output) luaL_error(L, "out of memory");
+	uint8_t *output = lua_newuserdata(L, input_len);
 
 	if (aes_gcm_crypt(bEncrypt, output, input, input_len, key, key_len, iv, iv_len, add, add_len, atag, sizeof(atag)))
 	{
@@ -712,7 +705,7 @@ static int luacall_aes_gcm(lua_State *L)
 		lua_pushlstring(L,(const char*)output,input_len);
 		lua_pushlstring(L,(const char*)atag,sizeof(atag));
 	}
-	free(output);
+	lua_remove(L,-3);
 
 	LUA_STACK_GUARD_RETURN(L,2)
 }
@@ -737,14 +730,14 @@ static int luacall_aes_ctr(lua_State *L)
 	size_t input_len;
 	const uint8_t *input = (uint8_t*)luaL_checklstring(L,3,&input_len);
 
-	uint8_t *output = malloc(input_len);
-	if (!output) luaL_error(L, "out of memory");
+	uint8_t *output = lua_newuserdata(L, input_len);
 
 	if (aes_ctr_crypt(key, key_len, iv, input, input_len, output))
 		lua_pushnil(L);
 	else
 		lua_pushlstring(L,(const char*)output,input_len);
-	free(output);
+
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -768,15 +761,14 @@ static int luacall_hkdf(lua_State *L)
 	lua_Integer okm_len = luaL_checkinteger(L,5);
 	if (okm_len<0) luaL_error(L, "hkdf: invalid arg");
 
-	uint8_t *okm = malloc(okm_len);
-	if (!okm) luaL_error(L, "out of memory");
+	uint8_t *okm = lua_newuserdata(L, okm_len);
 
 	if (hkdf(sha_ver, salt, salt_len, ikm, ikm_len, info, info_len, okm, okm_len))
 		lua_pushnil(L);
 	else
 		lua_pushlstring(L,(const char*)okm, okm_len);
 
-	free(okm);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -2668,8 +2660,7 @@ static int luacall_csum_tcp_fix(lua_State *L)
 		luaL_error(L, "invalid payload length");
 
 	size_t l_tpl = l_tcp + l_pl;
-	uint8_t *tpl = malloc(l_tpl);
-	if (!tpl) luaL_error(L, "out of memory");
+	uint8_t *tpl = lua_newuserdata(L, l_tpl);
 
 	memcpy(tpl, b_tcp, l_tcp);
 	memcpy(tpl+l_tcp, b_pl, l_pl);
@@ -2677,7 +2668,7 @@ static int luacall_csum_tcp_fix(lua_State *L)
 	tcp_fix_checksum(tcp, l_tpl, ip, ip6);
 
 	lua_pushlstring(L,(char*)tpl,l_tcp);
-	free(tpl);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -2711,8 +2702,7 @@ static int luacall_csum_udp_fix(lua_State *L)
 		luaL_error(L, "invalid payload length");
 
 	size_t l_tpl = l_udp + l_pl;
-	uint8_t *tpl = malloc(l_tpl);
-	if (!tpl) luaL_error(L, "out of memory");
+	uint8_t *tpl = lua_newuserdata(L, l_tpl);
 
 	memcpy(tpl, b_udp, l_udp);
 	memcpy(tpl+l_udp, b_pl, l_pl);
@@ -2720,7 +2710,7 @@ static int luacall_csum_udp_fix(lua_State *L)
 	udp_fix_checksum(udp, l_tpl, ip, ip6);
 
 	lua_pushlstring(L,(char*)tpl,l_udp);
-	free(tpl);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -2754,8 +2744,7 @@ static int luacall_csum_icmp_fix(lua_State *L)
 		luaL_error(L, "invalid payload length");
 
 	size_t l_tpl = l_icmp + l_pl;
-	uint8_t *tpl = malloc(l_tpl);
-	if (!tpl) luaL_error(L, "out of memory");
+	uint8_t *tpl = lua_newuserdata(L, l_tpl);
 
 	memcpy(tpl, b_icmp, l_icmp);
 	memcpy(tpl+l_icmp, b_pl, l_pl);
@@ -2763,7 +2752,7 @@ static int luacall_csum_icmp_fix(lua_State *L)
 	icmp_fix_checksum(icmp, l_tpl, ip6);
 
 	lua_pushlstring(L,(char*)tpl,l_icmp);
-	free(tpl);
+	lua_remove(L,-2);
 
 	LUA_STACK_GUARD_RETURN(L,1)
 }
@@ -3014,74 +3003,71 @@ static int lua_get_ifaddrs(lua_State *L)
 	ULONG Size=0;
 	if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAGS, NULL, NULL, &Size)==ERROR_BUFFER_OVERFLOW)
 	{
-		PIP_ADAPTER_ADDRESSES pip, pips = (PIP_ADAPTER_ADDRESSES)malloc(Size);
-		if (pips)
+		PIP_ADAPTER_ADDRESSES pip, pips = (PIP_ADAPTER_ADDRESSES)lua_newuserdata(L, Size);
+		if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAGS, NULL, pips, &Size)==ERROR_SUCCESS)
 		{
-			if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAGS, NULL, pips, &Size)==ERROR_SUCCESS)
+			lua_newtable(L);
+			for(pip=pips; pip ; pip=pip->Next)
 			{
-				lua_newtable(L);
-				for(pip=pips; pip ; pip=pip->Next)
+				if (!pip->FirstUnicastAddress || pip->OperStatus!=IfOperStatusUp) continue; // disconnected ?
+
+				char ifname[16];
+				snprintf(ifname,sizeof(ifname),"%u.0",pip->IfIndex);
+				lua_pushf_table(L,ifname);
+				lua_getfield(L,-1,ifname);
+				lua_pushf_str(L, "guid", pip->AdapterName);
+				if (pip->PhysicalAddressLength) lua_pushf_lstr(L, "phys",  pip->PhysicalAddress, pip->PhysicalAddressLength);
+				lua_pushf_int(L, "index", pip->IfIndex);
+				lua_pushf_int(L, "index6", pip->Ipv6IfIndex);
+				lua_pushf_int(L, "flags", pip->Flags);
+				lua_pushf_lint(L, "mtu", pip->Mtu);
+				lua_pushf_int(L, "iftype", pip->IfType);
+				lua_pushf_lint(L, "speed_xmit", pip->TransmitLinkSpeed);
+				lua_pushf_lint(L, "speed_recv", pip->ReceiveLinkSpeed);
+				lua_pushf_lint(L, "metric4", pip->Ipv4Metric);
+				lua_pushf_lint(L, "metric6", pip->Ipv6Metric);
+				lua_pushf_lint(L, "conntype", pip->ConnectionType);
+				lua_pushf_lint(L, "tunneltype", pip->TunnelType);
+				lua_pushf_table(L,"addr");
+				lua_getfield(L,-1,"addr");
+
+				int n;
+				uint32_t a4,a44;
+				PIP_ADAPTER_UNICAST_ADDRESS_LH pa;
+				for(pa=pip->FirstUnicastAddress, n=1; pa ; pa=pa->Next, n++)
 				{
-					if (!pip->FirstUnicastAddress || pip->OperStatus!=IfOperStatusUp) continue; // disconnected ?
-
-					char ifname[16];
-					snprintf(ifname,sizeof(ifname),"%u.0",pip->IfIndex);
-					lua_pushf_table(L,ifname);
-					lua_getfield(L,-1,ifname);
-
-					lua_pushf_str(L, "guid", pip->AdapterName);
-					if (pip->PhysicalAddressLength) lua_pushf_lstr(L, "phys",  pip->PhysicalAddress, pip->PhysicalAddressLength);
-					lua_pushf_int(L, "index", pip->IfIndex);
-					lua_pushf_int(L, "index6", pip->Ipv6IfIndex);
-					lua_pushf_int(L, "flags", pip->Flags);
-					lua_pushf_lint(L, "mtu", pip->Mtu);
-					lua_pushf_int(L, "iftype", pip->IfType);
-					lua_pushf_lint(L, "speed_xmit", pip->TransmitLinkSpeed);
-					lua_pushf_lint(L, "speed_recv", pip->ReceiveLinkSpeed);
-					lua_pushf_lint(L, "metric4", pip->Ipv4Metric);
-					lua_pushf_lint(L, "metric6", pip->Ipv6Metric);
-					lua_pushf_lint(L, "conntype", pip->ConnectionType);
-					lua_pushf_lint(L, "tunneltype", pip->TunnelType);
-					lua_pushf_table(L,"addr");
-					lua_getfield(L,-1,"addr");
-
-					int n;
-					uint32_t a4,a44;
-					PIP_ADAPTER_UNICAST_ADDRESS_LH pa;
-					for(pa=pip->FirstUnicastAddress, n=1; pa ; pa=pa->Next, n++)
+					lua_pushi_table(L, n);
+					lua_rawgeti(L, -1, n);
+					lua_pushf_ipaddr(L, "addr", pa->Address.lpSockaddr);
+					switch(pa->Address.lpSockaddr->sa_family)
 					{
-						lua_pushi_table(L, n);
-						lua_rawgeti(L, -1, n);
-						lua_pushf_ipaddr(L, "addr", pa->Address.lpSockaddr);
-						switch(pa->Address.lpSockaddr->sa_family)
-						{
-							case AF_INET:
-								if (pa->OnLinkPrefixLength<=32)
-								{
-									a44 = mask_from_bitcount(pa->OnLinkPrefixLength);
-									a4 = ~a44;
-									lua_pushf_lstr(L, "netmask", (const char*)&a4, 4);
-									a4 &= ((struct sockaddr_in*)pa->Address.lpSockaddr)->sin_addr.s_addr;
-									a4 |= a44;
-									lua_pushf_lstr(L, "broadcast", (const char*)&a4, 4);
-								}
-								break;
-							case AF_INET6:
-								if (pa->OnLinkPrefixLength<=128)
-								{
-									lua_pushf_lstr(L, "netmask", (const char*)mask_from_bitcount6(128 - pa->OnLinkPrefixLength), 16);
-								}
-								break;
-						}
-						lua_pushf_ipaddr(L, "addr", pa->Address.lpSockaddr);
-						lua_pop(L,1);
+						case AF_INET:
+							if (pa->OnLinkPrefixLength<=32)
+							{
+								a44 = mask_from_bitcount(pa->OnLinkPrefixLength);
+								a4 = ~a44;
+								lua_pushf_lstr(L, "netmask", (const char*)&a4, 4);
+								a4 &= ((struct sockaddr_in*)pa->Address.lpSockaddr)->sin_addr.s_addr;
+								a4 |= a44;
+								lua_pushf_lstr(L, "broadcast", (const char*)&a4, 4);
+							}
+							break;
+						case AF_INET6:
+							if (pa->OnLinkPrefixLength<=128)
+							{
+								lua_pushf_lstr(L, "netmask", (const char*)mask_from_bitcount6(128 - pa->OnLinkPrefixLength), 16);
+							}
+							break;
 					}
-					lua_pop(L,2);
+					lua_pushf_ipaddr(L, "addr", pa->Address.lpSockaddr);
+					lua_pop(L,1);
 				}
+				lua_pop(L,2);
 			}
-			free (pips);
+			lua_remove(L,-2);
 			goto ok;
 		}
+		lua_remove(L,-1);
 	}
 
 	lua_pushnil(L);
@@ -3309,14 +3295,14 @@ static int luacall_tls_mod(lua_State *L)
 	if (mod.mod)
 	{
 		size_t newlen = fake_tls_len, maxlen = fake_tls_len + sizeof(mod.sni) + 4;
-		uint8_t *newtls = malloc(maxlen);
-		if (!newtls) luaL_error(L, "out of memory");
+
+		uint8_t *newtls = lua_newuserdata(L, maxlen);
 
 		memcpy(newtls, fake_tls, newlen);
 		bRes = TLSMod(&mod, payload, payload_len, newtls, &newlen, maxlen);
 		lua_pushlstring(L,(char*)newtls,newlen);
 
-		free(newtls);
+		lua_remove(L,-2);
 	}
 	else
 	{

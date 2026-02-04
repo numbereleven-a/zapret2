@@ -446,7 +446,7 @@ bool dp_copy(struct desync_profile *to, const struct desync_profile *from)
 		free(to->cookie);
 		if (!(to->cookie = strdup(from->cookie))) return false;
 	}
-	if (from->hostlist_auto)
+	if (from->hostlist_auto && from->hostlist_auto!=to->hostlist_auto)
 	{
 		if (to->hostlist_auto)
 		{

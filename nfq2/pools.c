@@ -86,7 +86,7 @@ hostfail_pool * HostFailPoolAdd(hostfail_pool **pp,const char *s,int fail_time)
 {
 	size_t slen = strlen(s);
 	ADD_STR_POOL(hostfail_pool, pp, s, slen)
-	elem->expire = time(NULL) + fail_time;
+	elem->expire = boottime() + fail_time;
 	elem->counter = 0;
 	return elem;
 }
@@ -105,7 +105,7 @@ void HostFailPoolDel(hostfail_pool **p, hostfail_pool *elem)
 void HostFailPoolPurge(hostfail_pool **pp)
 {
 	hostfail_pool *elem, *tmp;
-	time_t now = time(NULL);
+	time_t now = boottime();
 	HASH_ITER(hh, *pp, elem, tmp)
 	{
 		if (now >= elem->expire)
@@ -114,7 +114,7 @@ void HostFailPoolPurge(hostfail_pool **pp)
 }
 void HostFailPoolPurgeRateLimited(hostfail_pool **pp, time_t *purge_prev)
 {
-	time_t now = time(NULL);
+	time_t now = boottime();
 	// do not purge too often to save resources
 	if (*purge_prev != now)
 	{
@@ -125,7 +125,7 @@ void HostFailPoolPurgeRateLimited(hostfail_pool **pp, time_t *purge_prev)
 void HostFailPoolDump(hostfail_pool *p)
 {
 	hostfail_pool *elem, *tmp;
-	time_t now = time(NULL);
+	time_t now = boottime();
 	HASH_ITER(hh, p, elem, tmp)
 		printf("host=%s counter=%d time_left=%lld\n",elem->str,elem->counter,(long long int)elem->expire-now);
 }
@@ -966,7 +966,7 @@ struct blob_item *blob_collection_search_name(struct blob_collection_head *head,
 
 static void ipcache_item_touch(ip_cache_item *item)
 {
-	time(&item->last);
+	item->last = boottime();
 }
 static void ipcache_item_init(ip_cache_item *item)
 {
@@ -1029,7 +1029,7 @@ static void ipcache4Print(ip_cache4 *ipcache)
 	time_t now;
 	ip_cache4 *ipc, *tmp;
 
-	time(&now);
+	now = boottime();
 	HASH_ITER(hh, ipcache , ipc, tmp)
 	{
 		*s_ip=0;
@@ -1087,7 +1087,7 @@ static void ipcache6Print(ip_cache6 *ipcache)
 	time_t now;
 	ip_cache6 *ipc, *tmp;
 
-	time(&now);
+	now = boottime();
 	HASH_ITER(hh, ipcache , ipc, tmp)
 	{
 		*s_ip=0;
@@ -1133,7 +1133,7 @@ ip_cache_item *ipcacheTouch(ip_cache *ipcache, const struct in_addr *a4, const s
 static void ipcache4_purge(ip_cache4 **ipcache, time_t lifetime)
 {
 	ip_cache4 *elem, *tmp;
-	time_t now = time(NULL);
+	time_t now = boottime();
 	HASH_ITER(hh, *ipcache, elem, tmp)
 	{
 		if (now >= (elem->data.last + lifetime))
@@ -1147,7 +1147,7 @@ static void ipcache4_purge(ip_cache4 **ipcache, time_t lifetime)
 static void ipcache6_purge(ip_cache6 **ipcache, time_t lifetime)
 {
 	ip_cache6 *elem, *tmp;
-	time_t now = time(NULL);
+	time_t now = boottime();
 	HASH_ITER(hh, *ipcache, elem, tmp)
 	{
 		if (now >= (elem->data.last + lifetime))
@@ -1169,7 +1169,7 @@ static void ipcache_purge(ip_cache *ipcache, time_t lifetime)
 static time_t ipcache_purge_prev=0;
 void ipcachePurgeRateLimited(ip_cache *ipcache, time_t lifetime)
 {
-	time_t now = time(NULL);
+	time_t now = boottime();
 	// do not purge too often to save resources
 	if (ipcache_purge_prev != now)
 	{

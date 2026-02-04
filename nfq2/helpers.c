@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include "helpers.h"
+#include "random.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #define UNIQ_SORT \
 { \
@@ -472,14 +474,72 @@ void fill_random_az09(uint8_t *p,size_t sz)
 		p[k] = rnd<10 ? rnd+'0' : 'a'+rnd-10;
 	}
 }
+#if defined(__FreeBSD__) && __FreeBSD_version <= 1200000
+#include <sys/sysctl.h>
+int getentropy(void *buf, size_t len)
+{
+    int mib[2];
+    size_t size = len;
+
+    // Check for reasonable length (getentropy limits to 256)
+    if (len > 256) {
+        errno = EIO;
+        return -1;
+    }
+
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_ARND;
+
+    if (sysctl(mib, 2, buf, &size, NULL, 0) == -1) {
+        return -1;
+    }
+
+    return (size == len) ? 0 : -1;
+}
+#endif
+
 bool fill_crypto_random_bytes(uint8_t *p,size_t sz)
 {
-	bool b;
-	FILE *F = fopen("/dev/random","rb");
-	if (!F) return false;
-	b = fread(p,sz,1,F)==1;
-	fclose(F);
-	return b;
+	ssize_t rd;
+	int fd;
+
+#if defined(__linux__) || defined(__CYGWIN__)
+	for(; sz && (rd=getrandom(p,sz,GRND_NONBLOCK))>0 ; p+=rd, sz-=rd);
+	if (sz)
+#elif defined(BSD)
+	while(sz)
+	{
+		rd = sz<256 ? sz : 256; // BSD limitation
+		if (getentropy(p,rd)) break;
+		p+=rd; sz-=rd;
+	}
+	if (sz)
+#endif
+	{
+		if ((fd = open("/dev/random",O_NONBLOCK))>=0)
+		{
+			do
+			{
+				if ((rd=read(fd,p,sz))>0)
+				{
+					p+=rd; sz-=rd;
+				}
+			} while(sz && rd>0);
+			close(fd);
+		}
+		if (sz && (fd = open("/dev/urandom",0))>=0)
+		{
+			do
+			{
+				if ((rd=read(fd,p,sz))>0)
+				{
+					p+=rd; sz-=rd;
+				}
+			} while(sz && rd>0);
+			close(fd);
+		}
+	}
+	return !sz;
 }
 
 #if defined(__GNUC__) && !defined(__llvm__)
@@ -580,4 +640,10 @@ void mask_from_bitcount6_prepare(void)
 const struct in6_addr *mask_from_bitcount6(uint32_t zct)
 {
 	return ip6_mask+zct;
+}
+
+time_t boottime(void)
+{
+	struct timespec ts;
+	return clock_gettime(CLOCK_BOOT_OR_UPTIME, &ts) ? 0 : ts.tv_sec;
 }

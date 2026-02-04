@@ -2169,7 +2169,7 @@ static time_t wlan_info_last = 0;
 static bool wlan_info_rate_limited(struct mnl_socket* nl, uint16_t wlan_family_id, struct wlan_interface_collection* w)
 {
 	bool bres = true;
-	time_t now = time(NULL);
+	time_t now = boottime();
 
 	// do not purge too often to save resources
 	if (wlan_info_last != now)

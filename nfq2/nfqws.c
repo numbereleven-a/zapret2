@@ -426,7 +426,10 @@ static int nfq_main(void)
 				if (r) DLOG_ERR("nfq_handle_packet error %d\n", r);
 			}
 			else
-				DLOG("recv from nfq returned 0 !\n");
+			{
+				DLOG_ERR("recv from nfq returned 0 !\n");
+				goto err;
+			}
 		}
 		if (errno==EINTR)
 		{
@@ -694,6 +697,8 @@ static int win_main()
 	{
 		res=ERROR_NOT_ENOUGH_MEMORY; goto ex;
 	}
+
+	catch_signals();
 
 	for (;;)
 	{
@@ -1676,7 +1681,7 @@ static void exithelp(void)
 		" --lua-init=@<filename>|<lua_text>\t\t\t; load LUA program from a file or string. if multiple parameters present order of execution is preserved. gzipped files are supported.\n"
 		" --lua-gc=<int>\t\t\t\t\t\t; forced garbage collection every N sec. default %u sec. triggers only when a packet arrives. 0 = disable.\n"
 		"\nMULTI-STRATEGY:\n"
-		" --new\t\t\t\t\t\t\t; begin new profile\n"
+		" --new[=<name>]\t\t\t\t\t\t\t; begin new profile. optionally set name\n"
 		" --skip\t\t\t\t\t\t\t; do not use this profile\n"
 		" --name=<name>\t\t\t\t\t\t; set profile name\n"
 		" --template[=<name>]\t\t\t\t\t; use this profile as template (must be named or will be useless)\n"
@@ -1926,7 +1931,7 @@ static const struct option long_options[] = {
 	[IDX_HOSTLIST_AUTO_UDP_IN] = {"hostlist-auto-udp-in", required_argument, 0, 0},
 	[IDX_HOSTLIST_AUTO_UDP_OUT] = {"hostlist-auto-udp-out", required_argument, 0, 0},
 	[IDX_HOSTLIST_AUTO_DEBUG] = {"hostlist-auto-debug", required_argument, 0, 0},
-	[IDX_NEW] = {"new", no_argument, 0, 0},
+	[IDX_NEW] = {"new", optional_argument, 0, 0},
 	[IDX_SKIP] = {"skip", no_argument, 0, 0},
 	[IDX_NAME] = {"name", required_argument, 0, 0},
 	[IDX_TEMPLATE] = {"template", optional_argument, 0, 0},
@@ -2485,6 +2490,11 @@ int main(int argc, char **argv)
 				}
 				dp = &dpl->dp;
 				dp->n = desync_profile_count;
+			}
+			if (optarg && !(dp->name = strdup(optarg)))
+			{
+				DLOG_ERR("out of memory\n");
+				exit_clean(1);
 			}
 			anon_hl = anon_hl_exclude = NULL;
 			anon_ips = anon_ips_exclude = NULL;

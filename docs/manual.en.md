@@ -649,10 +649,10 @@ DESYNC ENGINE INIT:
  --lua-gc=<int>                                         ; Lua garbage collector invocation interval in seconds. 0 disables periodic calls.
 
 MULTI-STRATEGY:
- --new                                                  ; start a new profile
+ --new[=name]                                           ; start a new profile. optionally assign a name
  --skip                                                 ; ignore the profile
  --name=<name>                                          ; set the profile name
- --template[=<name>]                                    ; use the profile as a template and assign a name
+ --template[=<name>]                                    ; use the profile as a template and optionally assign a name
  --cookie[=<string>]                                    ; set the value of the "desync.cookie" Lua variable passed to each instance of this profile
  --import=<name>                                        ; copy settings from a template into the current profile, overwriting all existing settings
  --filter-l3=ipv4|ipv6                                  ; profile filter: IP protocol version
@@ -1828,8 +1828,10 @@ function bcryptorandom(size)
 ```
 
 Generates a raw string containing a cryptographically secure block of random data of the specified size. The source is `/dev/random`.
-If the entropy pool is exhausted, this function may cause the process to hang (block). To prevent this, install `haveged` or `rngd`.
-This should not be used for random data that does not require cryptographic security.
+
+Random data source - getrandom() (Linux), getentropy() (BSD), `/dev/random`.
+`/dev/urandom` is used as a fallback if the previous sources failed or block.
+lack of entropy pool is typical Android problem.
 
 #### bxor,bor,band
 
