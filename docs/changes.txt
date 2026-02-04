@@ -218,3 +218,6 @@ v0.8.1
 0.9.1
 
 * nfqws2: 'stat', 'clock_getfloattime' luacalls
+* nfqws2: bcryptorandom normalize behavior when system entropy is low. prevent blocks
+* nfqws2: --new[=name]
+* winws2: fix not setting signal handlers
