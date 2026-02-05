@@ -38,7 +38,7 @@
     - [Структура track](#структура-track)
       - [Особенности обработки icmp](#особенности-обработки-icmp)
       - [Особенности обработки raw ip](#особенности-обработки-raw-ip)
-- [C интерфейс nfqws2](#c-интерфейс-nfqws2)
+- [С интерфейс nfqws2](#с-интерфейс-nfqws2)
   - [Базовые константы](#базовые-константы)
   - [Стандартные блобы](#стандартные-блобы)
   - [Переменные окружения](#переменные-окружения)
@@ -73,6 +73,7 @@
       - [clock\_gettime](#clock_gettime)
       - [getpid](#getpid)
       - [stat](#stat)
+      - [time](#time)
     - [Опции по работе с пакетами](#опции-по-работе-с-пакетами)
       - [standard reconstruct](#standard-reconstruct)
       - [standard rawsend](#standard-rawsend)
@@ -150,7 +151,7 @@
     - [rawsend\_dissect\_segmented](#rawsend_dissect_segmented)
     - [rawsend\_payload\_segmented](#rawsend_payload_segmented)
   - [Стандартные фильтры direction и payload](#стандартные-фильтры-direction-и-payload)
-  - [Работа с многопакетными пейлоадами](#работа-с-многопакетными-пейлоадами)
+  - [Работа с многопакетными пейлоадам](#работа-с-многопакетными-пейлоадам)
   - [Оркестрация](#оркестрация)
     - [instance\_cutoff\_shim](#instance_cutoff_shim)
     - [cutoff\_shim\_check](#cutoff_shim_check)
@@ -2139,6 +2140,32 @@ function stat(filename)
 
 В случае неудачи возвращает 3 значения : nil, строка ошибки, код ошибки errno.
 
+#### time
+
+```
+function localtime(unixtime)
+function gmtime(unixtime)
+function timelocal(tm)
+function timegm(tm)
+```
+
+Функции localtime и gmtime возвращают таблицу, аналогичную struct tm в C. timelocal и timegm - обратные функции.
+
+| Поле     | Тип    | Описание    |
+| :------- | :----- | :---------- |
+| sec*     | number | секунды     |
+| min*     | number | минуты      |
+| hour*    | number | часы        |
+| mon*     | number | месяц, начиная с 0 |
+| mday*    | number | день месяца |
+| year*    | number | год - полный, не с 1900 года |
+| wday     | number | день недели. 0 - воскресенье, 6 - суббота |
+| yday     | number | номер дня в году, начиная с 0 |
+| isdst*   | number | не 0, если включен переход на летнее/зимнее время |
+| zone     | string | часовой пояс (timezone) |
+| str      | number | отформатированная строка dd.mm.yyyy hh:mi:ss  |
+
+Поля, помеченные `*`, нужны для обратного перевода. Остальные не учитываются.
 
 ### Опции по работе с пакетами
 

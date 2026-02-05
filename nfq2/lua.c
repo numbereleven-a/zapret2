@@ -3614,6 +3614,90 @@ static int luacall_stat(lua_State *L)
 	return 1;
 }
 
+static void lua_xtime(lua_State *L, struct tm *(*timefunc)(const time_t *,struct tm *))
+{
+	struct tm t;
+
+	time_t unixtime = (time_t)luaL_checklint(L,1);
+	if (!timefunc(&unixtime, &t))
+	{
+		lua_pushnil(L);
+	}
+	else
+	{
+		lua_createtable(L, 0, 11);
+		lua_pushf_int(L,"sec", t.tm_sec);
+		lua_pushf_int(L,"min", t.tm_min);
+		lua_pushf_int(L,"hour", t.tm_hour);
+		lua_pushf_int(L,"mday", t.tm_mday);
+		lua_pushf_int(L,"mon", t.tm_mon);
+		lua_pushf_int(L,"year", t.tm_year+1900);
+		lua_pushf_int(L,"wday", t.tm_wday);
+		lua_pushf_int(L,"yday", t.tm_yday);
+		lua_pushf_int(L,"isdst", t.tm_isdst);
+		lua_pushf_str(L,"zone", t.tm_zone);
+
+		char s[24];
+		snprintf(s,sizeof(s),"%02d.%02d.%04d %02d:%02d:%02d", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900, t.tm_hour, t.tm_min, t.tm_sec);
+		lua_pushf_str(L,"str", s);
+	}
+}
+static int luacall_localtime(lua_State *L)
+{
+	// localtime(unixtime)
+	lua_check_argc(L,"localtime",1);
+	lua_xtime(L, localtime_r);
+	return 1;
+}
+static int luacall_gmtime(lua_State *L)
+{
+	// gmtime(unixtime)
+	lua_check_argc(L,"gmtime",1);
+	lua_xtime(L, gmtime_r);
+	return 1;
+}
+#define TIMEX_VAL(v) \
+	lua_getfield(L,1,#v); \
+	if (lua_type(L,-1)!=LUA_TNUMBER) luaL_error(L,"invalid tm." #v); \
+	t.tm_##v = lua_tointeger(L,-1); \
+	lua_pop(L,1);
+static void lua_timex(lua_State *L, time_t (*timefunc)(struct tm *))
+{
+	if (lua_type(L,1)!=LUA_TTABLE) luaL_error(L,"invalid tm structure");
+
+	struct tm t;
+	TIMEX_VAL(sec)
+	TIMEX_VAL(min)
+	TIMEX_VAL(hour)
+	TIMEX_VAL(mday)
+	TIMEX_VAL(mon)
+	TIMEX_VAL(year)
+	t.tm_year-=1900;
+	TIMEX_VAL(isdst)
+
+	time_t unixtime = timefunc(&t);
+	if (unixtime==(time_t)-1)
+	{
+		lua_pushnil(L);
+	}
+	else
+		lua_pushlint(L,unixtime);
+}
+static int luacall_timelocal(lua_State *L)
+{
+	// timelocal(tm)
+	lua_check_argc(L,"timelocal",1);
+	lua_timex(L, timelocal);
+	return 1;
+}
+static int luacall_timegm(lua_State *L)
+{
+	// timegm(tm)
+	lua_check_argc(L,"timegm",1);
+	lua_timex(L, timegm);
+	return 1;
+}
+
 // ----------------------------------------
 
 void lua_cleanup(lua_State *L)
@@ -4258,7 +4342,13 @@ static void lua_init_functions(void)
 		{"gzip_deflate",luacall_gzip_deflate},
 
 		// stat() - file size, mod time
-		{"stat",luacall_stat}
+		{"stat",luacall_stat},
+
+		// time
+		{"localtime",luacall_localtime},
+		{"gmtime",luacall_gmtime},
+		{"timelocal",luacall_timelocal},
+		{"timegm",luacall_timegm}
 	};
 	for(int i=0;i<(sizeof(lfunc)/sizeof(*lfunc));i++)
 		lua_register(params.L,lfunc[i].name,lfunc[i].f);

@@ -76,6 +76,7 @@
       - [clock\_gettime](#clock_gettime)
       - [getpid](#getpid)
       - [stat](#stat)
+      - [time](#time)
     - [Packet handling options](#packet-handling-options)
       - [standard reconstruct](#standard-reconstruct)
       - [standard rawsend](#standard-rawsend)
@@ -1992,6 +1993,34 @@ If successful returns the following table :
 | dev      | number | device id |
 
 In case of error returns 3 values : nil, error string, error number (errno).
+
+#### time
+
+```
+function localtime(unixtime)
+function gmtime(unixtime)
+function timelocal(tm)
+function timegm(tm)
+```
+
+localtime and gmtime return dissected unixtime similar to C "struct tm". timelocal and timegm are reverse functions.
+
+| Поле     | Тип    | Описание    |
+| :------- | :----- | :---------- |
+| sec*     | number | second      |
+| min*     | number | minute      |
+| hour*    | number | hour        |
+| mon*     | number | month starting from 0 |
+| mday*    | number | day of month starting from 1 |
+| year*    | number | full year, not from 1900 |
+| wday     | number | day of week. 0 = sunday |
+| yday     | number | day of year starting from 0 |
+| isdst*   | number | not zero if summer time in effect |
+| zone     | string | time zone |
+| str      | number | formatted string: "dd.mm.yyyy hh:mi:ss"  |
+
+Fields marked with "*" are required for reverse translation.
+
 
 ### Packet handling options
 
