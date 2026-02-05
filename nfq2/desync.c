@@ -609,7 +609,8 @@ static uint8_t ct_new_postnat_fix(const t_ctrack *ctrack, const struct dissect *
 	// if used in postnat chain, dropping initial packet will cause conntrack connection teardown
 	// so we need to workaround this.
 	// SYN and SYN,ACK checks are for conntrack-less mode
-	if (ctrack && (params.server ? ctrack->pos.server.pcounter : ctrack->pos.client.pcounter) == 1 || dis->tcp && (tcp_syn_segment(dis->tcp) || tcp_synack_segment(dis->tcp)))
+	if (ctrack && (params.server ? ctrack->pos.server.pcounter : ctrack->pos.client.pcounter) == 1 ||
+		!ctrack && dis->tcp && (tcp_syn_segment(dis->tcp) || tcp_synack_segment(dis->tcp)))
 	{
 		if (dis->len_pkt > *len_mod_pkt)
 			DLOG_ERR("linux postnat conntrack workaround cannot be applied\n");
@@ -1644,7 +1645,7 @@ static const uint8_t *dns_extract_name(const uint8_t *a, const uint8_t *b, const
 
 	if (bptr)
 	{
-		if (a>=e) return NULL;
+		if (a+1>=e) return NULL;
 		// name pointer
 		off = (*a & 0x3F)<<8 | a[1];
 		p = b + off;
@@ -2029,7 +2030,7 @@ static uint8_t dpi_desync_ip_packet(
 	if (!!dis->ip == !!dis->ip6) return verdict;
 
 	struct sockaddr_storage src, dst;
-	const char *ssid;
+	const char *ssid = NULL;
 	struct desync_profile *dp;
 
 	extract_endpoints(dis->ip, dis->ip6, NULL, NULL, &src, &dst);
@@ -2128,6 +2129,8 @@ static uint8_t dpi_desync_packet_play(
 			verdict = dpi_desync_ip_packet(fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
 		}
 	}
+	else
+		DLOG("invalid packet - neither ipv4 or ipv6\n");
 	return verdict;
 }
 uint8_t dpi_desync_packet(uint32_t fwmark, const char *ifin, const char *ifout, const uint8_t *data_pkt, size_t len_pkt, uint8_t *mod_pkt, size_t *len_mod_pkt)
