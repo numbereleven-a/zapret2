@@ -258,6 +258,8 @@ int gcm_start(gcm_context *ctx,    // pointer to user-provided GCM context
 	size_t use_len;     // byte count to process, up to 16 bytes
 	size_t i;           // local loop iterator
 
+	if (iv_len!=12) return -1;
+
 	// since the context might be reused under the same key
 	// we zero the working buffers for this next new process
 	memset(ctx->y, 0x00, sizeof(ctx->y));
@@ -391,7 +393,9 @@ int gcm_finish(gcm_context *ctx,   // pointer to user-provided GCM context
 	uint64_t orig_add_len = ctx->add_len * 8;
 	size_t i;
 
-	if (tag_len != 0) memcpy(tag, ctx->base_ectr, tag_len);
+	if (tag_len>16) return -1;
+
+	if (tag_len) memcpy(tag, ctx->base_ectr, tag_len);
 
 	if (orig_len || orig_add_len) {
 		memset(work_buf, 0x00, 16);
@@ -443,10 +447,12 @@ int gcm_crypt_and_tag(
 	   prepare the gcm context with the keying material, we simply
 	   invoke each of the three GCM sub-functions in turn...
 	*/
-	gcm_start(ctx, mode, iv, iv_len, add, add_len);
-	gcm_update(ctx, length, input, output);
-	gcm_finish(ctx, tag, tag_len);
-	return(0);
+	if (iv_len!=12 || tag_len>16) return -1;
+
+	int ret;
+	if ((ret=gcm_start(ctx, mode, iv, iv_len, add, add_len))) return ret;
+	if ((ret=gcm_update(ctx, length, input, output))) return ret;
+	return gcm_finish(ctx, tag, tag_len);
 }
 
 
@@ -477,6 +483,9 @@ int gcm_auth_decrypt(
 	uchar check_tag[16];        // the tag generated and returned by decryption
 	int diff;                   // an ORed flag to detect authentication errors
 	size_t i;                   // our local iterator
+
+	if (iv_len!=12 || tag_len>16) return -1;
+
 	/*
 	   we use GCM_DECRYPT_AND_TAG (above) to perform our decryption
 	   (which is an identical XORing to reverse the previous one)
