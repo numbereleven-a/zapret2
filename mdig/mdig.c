@@ -220,7 +220,7 @@ static void *t_resolver(void *arg)
 			{
 				if ((family == AF_INET && (glob.family & FAMILY4)) || (family == AF_INET6 && (glob.family & FAMILY6)))
 				{
-					unsigned int mask;
+					unsigned int mask=0;
 					bool mask_needed = false;
 					if (s_mask)
 					{
