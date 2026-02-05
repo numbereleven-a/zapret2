@@ -14,7 +14,7 @@ end
 
 function test_all(...)
 	test_run({
-		test_crypto, test_bin, test_gzip, test_ipstr, test_dissect, test_csum, test_resolve,
+		test_crypto, test_bin, test_time, test_gzip, test_ipstr, test_dissect, test_csum, test_resolve,
 		test_get_source_ip, test_ifaddrs, test_rawsend},...)
 end
 
@@ -413,6 +413,33 @@ end
 
 function test_bin(...)
 	test_run({test_ub, test_bit, test_swap, test_ux},...)
+end
+
+function test_time(...)
+	print("* time")
+
+	local unixtime=os.time()
+	local tm = localtime(unixtime);
+	print()
+	print("now: "..tm.str.." "..tm.zone.." = "..unixtime)
+	local tm = gmtime(unixtime);
+	print("gmt: "..tm.str.." "..tm.zone.." = "..unixtime)
+	print()
+	for i=1,20 do
+		unixtime = math.random(0,10000000000);
+		tm = localtime(unixtime);
+		local t = timelocal(tm)
+		print("timelocal: "..tm.str.." "..tm.zone.." = "..t)
+		print( t==unixtime and "LOCALTIME OK" or "LOCALTIME FAILED" )
+		test_assert(t==unixtime)
+
+		unixtime = math.random(0,10000000000);
+		tm = gmtime(unixtime);
+		t = timegm(tm)
+		print("timegm: "..tm.str.." "..tm.zone.." = "..t)
+		print( t==unixtime and "GMTIME OK" or "GMTIME FAILED" )
+		test_assert(t==unixtime)
+	end
 end
 
 function test_gzip()
