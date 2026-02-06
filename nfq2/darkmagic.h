@@ -174,6 +174,7 @@ void str_udphdr(char *s, size_t s_len, const struct udphdr *udphdr);
 void str_icmphdr(char *s, size_t s_len, bool v6, const struct icmp46 *icmp);
 
 bool proto_check_ipv4(const uint8_t *data, size_t len);
+bool proto_check_ipv4_payload(const uint8_t *data, size_t len);
 void proto_skip_ipv4(const uint8_t **data, size_t *len);
 bool proto_check_ipv6(const uint8_t *data, size_t len);
 bool proto_check_ipv6_payload(const uint8_t *data, size_t len);

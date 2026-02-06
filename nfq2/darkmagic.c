@@ -102,8 +102,8 @@ bool tcp_syn_segment(const struct tcphdr *tcphdr)
 
 void extract_ports(const struct tcphdr *tcphdr, const struct udphdr *udphdr,uint8_t *proto, uint16_t *sport, uint16_t *dport)
 {
-	if (sport) *sport  = htons(tcphdr ? tcphdr->th_sport : udphdr ? udphdr->uh_sport : 0);
-	if (dport) *dport  = htons(tcphdr ? tcphdr->th_dport : udphdr ? udphdr->uh_dport : 0);
+	if (sport) *sport  = ntohs(tcphdr ? tcphdr->th_sport : udphdr ? udphdr->uh_sport : 0);
+	if (dport) *dport  = ntohs(tcphdr ? tcphdr->th_dport : udphdr ? udphdr->uh_dport : 0);
 	if (proto) *proto = tcphdr ? IPPROTO_TCP : udphdr ? IPPROTO_UDP : IPPROTO_NONE;
 }
 
@@ -378,6 +378,10 @@ bool proto_check_ipv4(const uint8_t *data, size_t len)
 	uint8_t off = ((struct ip*)data)->ip_hl << 2;
 	return off>=sizeof(struct ip) && len>=off;
 }
+bool proto_check_ipv4_payload(const uint8_t *data, size_t len)
+{
+	return len >= ntohs(((struct ip*)data)->ip_len);
+}
 // move to transport protocol
 void proto_skip_ipv4(const uint8_t **data, size_t *len)
 {
@@ -537,7 +541,7 @@ void proto_dissect_l3l4(const uint8_t *data, size_t len, struct dissect *dis, bo
 	dis->data_pkt = data;
 	dis->len_pkt = len;
 
-	if (proto_check_ipv4(data, len))
+	if (proto_check_ipv4(data, len) && (no_payload_check || proto_check_ipv4_payload(data, len)))
 	{
 		dis->ip = (const struct ip *) data;
 		dis->proto = dis->ip->ip_p;

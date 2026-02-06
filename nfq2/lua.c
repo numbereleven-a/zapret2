@@ -1053,7 +1053,7 @@ static int luacall_execution_plan(lua_State *L)
 			{
 				for (pl=0 ; pl<L7P_LAST ; pl++)
 				{
-					if (func->payload_type & (1<<pl))
+					if (func->payload_type & (1ULL<<pl))
 					{
 						if ((pls = l7payload_str(pl)))
 						{

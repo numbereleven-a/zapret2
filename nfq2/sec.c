@@ -210,10 +210,10 @@ int getmaxcap(void)
 }
 bool dropcaps(void)
 {
-	uint64_t caps = (1<<CAP_NET_ADMIN)|(1<<CAP_NET_RAW);
+	uint64_t caps = (1ULL<<CAP_NET_ADMIN)|(1ULL<<CAP_NET_RAW);
 	int maxcap = getmaxcap();
 
-	if (setpcap(caps|(1<<CAP_SETPCAP)))
+	if (setpcap(caps|(1ULL<<CAP_SETPCAP)))
 	{
 		for (int cap = 0; cap <= maxcap; cap++)
 		{
@@ -249,7 +249,7 @@ bool can_drop_root(void)
 {
 #ifdef __linux__
 	// has some caps
-	return checkpcap((1<<CAP_SETUID)|(1<<CAP_SETGID));
+	return checkpcap((1ULL<<CAP_SETUID)|(1ULL<<CAP_SETGID));
 #else
 	// effective root
 	return !geteuid();
