@@ -5663,8 +5663,8 @@ WinDivert 2.2.2-A, который идет в поставке zapret.
 
 ## Windows Server
 
-winws2 слинкован с wlanapi.dll, который по умолчанию не установлен в Windows Server.
-Для решения этой проблемы запустите power shell под администратором и выполните команду `Install-WindowsFeature -Name Wireless-Networking`.
+Для работы `--ssid-filter` необходимо установить поддержку беспроводных сетей.
+Запустите power shell под администратором и выполните команду `Install-WindowsFeature -Name Wireless-Networking`.
 После чего перезагрузите систему.
 
 ## Windows ARM64

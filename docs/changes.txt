@@ -226,3 +226,5 @@ v0.8.1
 
 nfqws2: bt and utp_bt protocol detectors
 nfqws2: localtime,gmtime,timelocal,timegm luacalls
+winws2: load wlanapi.dll dynamically only if needed
+winws2: fixed lost windivert deinit on logical network disappear

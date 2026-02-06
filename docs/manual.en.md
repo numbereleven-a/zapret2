@@ -5455,8 +5455,8 @@ There are several options :
 
 ## Windows Server
 
-winws2 is linked against wlanapi.dll which is absent by default.
-To solve this problem run power shell as administrator and execute command `Install-WindowsFeature -Name Wireless-Networking`.
+To use `--ssid-filter` install wireless networking feature.
+Run power shell as administrator and execute command `Install-WindowsFeature -Name Wireless-Networking`.
 Then reboot the system.
 
 ## Windows ARM64
