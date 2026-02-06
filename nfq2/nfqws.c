@@ -1097,7 +1097,7 @@ static bool parse_l7_list(char *opt, uint64_t *l7)
 			break;
 		}
 		else
-			*l7 |= 1<<proto;
+			*l7 |= 1ULL<<proto;
 
 		if (e) *e++ = c;
 		p = e;
@@ -1125,7 +1125,7 @@ static bool parse_l7p_list(char *opt, uint64_t *l7p)
 			break;
 		}
 		else
-			*l7p |= 1<<payload;
+			*l7p |= 1ULL<<payload;
 
 		if (e) *e++ = c;
 		p = e;
@@ -1379,7 +1379,7 @@ static void LuaDesyncDebug(struct desync_profile *dp, const char *entity)
 			if (func->payload_type)
 			{
 				for(i=0;i<L7P_LAST;i++)
-					if (func->payload_type & (1<<i))
+					if (func->payload_type & (1ULL<<i))
 						DLOG(" %s", l7payload_str(i));
 			}
 			else
