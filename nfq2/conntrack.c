@@ -353,7 +353,7 @@ void ConntrackPoolDump(const t_conntrack *p)
 	HASH_ITER(hh, p->pool, t, tmp) {
 		taddr2str(t->conn.l3proto, &t->conn.src, sa1, sizeof(sa1));
 		taddr2str(t->conn.l3proto, &t->conn.dst, sa2, sizeof(sa2));
-		printf("%s [%s]:%u => [%s]:%u : %s : t0=%llu last=t0+%llu now=last+%llu client=d%llu/n%llu/b%llu server=d%llu/n%llu/b%lld ",
+		printf("%s [%s]:%u => [%s]:%u : %s : t0=%llu last=t0+%llu now=last+%llu client=d%llu/n%llu/b%llu server=d%llu/n%llu/b%llu ",
 			proto_name(t->conn.l4proto),
 			sa1, t->conn.sport, sa2, t->conn.dport,
 			t->conn.l4proto == IPPROTO_TCP ? connstate_s[t->track.pos.state] : "-",

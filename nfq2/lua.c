@@ -1538,6 +1538,7 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 				break;
 			case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
 				hdrlen = 8;
+				if (len < hdrlen) goto end;
 				fr_off = ntohs(((struct ip6_frag*)data)->ip6f_offlg & IP6F_OFF_MASK);
 				fr = ((struct ip6_frag*)data)->ip6f_offlg & (IP6F_OFF_MASK|IP6F_MORE_FRAG);
 				break;

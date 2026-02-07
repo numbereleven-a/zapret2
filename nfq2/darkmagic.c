@@ -526,6 +526,7 @@ uint8_t *proto_find_ip6_exthdr(struct ip6_hdr *ip6, size_t len, uint8_t proto)
 			break;
 		case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
 			hdrlen = 8;
+			if (len < hdrlen) return false; // error
 			fr_off = ntohs(((struct ip6_frag*)data)->ip6f_offlg & IP6F_OFF_MASK);
 			fr = ((struct ip6_frag*)data)->ip6f_offlg & (IP6F_OFF_MASK|IP6F_MORE_FRAG);
 			break;

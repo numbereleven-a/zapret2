@@ -17,12 +17,15 @@ static bool FindNLD(const uint8_t *dom, size_t dlen, int level, const uint8_t **
 {
 	int i;
 	const uint8_t *p1,*p2;
+
+	if (level<1) return false;
 	for (i=1,p2=dom+dlen;i<level;i++)
 	{
 		for (p2--; p2>dom && *p2!='.'; p2--);
 		if (p2<=dom) return false;
 	}
 	for (p1=p2-1 ; p1>dom && *p1!='.'; p1--);
+	if (p1<dom) return false;
 	if (*p1=='.') p1++;
 	if (p) *p = p1;
 	if (len) *len = p2-p1;

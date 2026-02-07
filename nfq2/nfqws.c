@@ -235,6 +235,7 @@ static int write_pidfile(FILE **Fpid)
 
 
 #ifdef __linux__
+// cookie must point to mod buffer with size RECONSTRUCT_MAX_SIZE
 static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *cookie)
 {
 	int id, ilen;
@@ -244,8 +245,8 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 	uint32_t ifidx_out, ifidx_in;
 	char ifout[IFNAMSIZ], ifin[IFNAMSIZ];
 	size_t modlen;
+	uint8_t *mod = (uint8_t*)cookie;
 	uint32_t mark;
-	uint8_t mod[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
 
 	ph = nfq_get_msg_packet_hdr(nfa);
 	id = ph ? ntohl(ph->packet_id) : 0;
@@ -266,7 +267,7 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 	if (ilen >= 0)
 	{
 		len = ilen;
-		modlen = sizeof(mod);
+		modlen = RECONSTRUCT_MAX_SIZE;
 		// there's no space to grow packet in recv blob from nfqueue. it can contain multiple packets with no extra buffer length for modifications.
 		// to support increased sizes use separate mod buffer
 		// this is not a problem because only LUA code can trigger VERDICT_MODIFY (and postnat workaround too, once a connection if first packet is dropped)
@@ -300,7 +301,7 @@ static void nfq_deinit(struct nfq_handle **h, struct nfq_q_handle **qh)
 		*h = NULL;
 	}
 }
-static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh)
+static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *mod_buffer)
 {
 	nfq_deinit(h, qh);
 
@@ -330,7 +331,7 @@ static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh)
 	}
 
 	DLOG_CONDUP("binding this socket to queue '%u'\n", params.qnum);
-	*qh = nfq_create_queue(*h, params.qnum, &nfq_cb, &params);
+	*qh = nfq_create_queue(*h, params.qnum, &nfq_cb, mod_buffer);
 	if (!*qh) {
 		DLOG_PERROR("nfq_create_queue()");
 		goto exiterr;
@@ -381,7 +382,7 @@ static int nfq_main(void)
 	int res, fd, e;
 	ssize_t rd;
 	FILE *Fpid = NULL;
-	uint8_t buf[RECONSTRUCT_MAX_SIZE] __attribute__((aligned(16)));
+	uint8_t *buf=NULL, *mod=NULL;
 
 	if (*params.pidfile && !(Fpid = fopen(params.pidfile, "w")))
 	{
@@ -423,7 +424,13 @@ static int nfq_main(void)
 		goto exok;
 	}
 
-	if (!nfq_init(&h, &qh))
+	if (!(buf = malloc(RECONSTRUCT_MAX_SIZE)) || !(mod = malloc(RECONSTRUCT_MAX_SIZE)))
+	{
+		DLOG_ERR("out of memory\n");
+		goto err;
+	}
+
+	if (!nfq_init(&h, &qh, mod))
 		goto err;
 
 #ifdef HAS_FILTER_SSID
@@ -446,7 +453,7 @@ static int nfq_main(void)
 	fd = nfq_fd(h);
 	do
 	{
-		while ((rd = recv(fd, buf, sizeof(buf), 0)) >= 0)
+		while ((rd = recv(fd, buf, RECONSTRUCT_MAX_SIZE, 0)) >= 0)
 		{
 			if (bQuit) goto quit;
 			ReloadCheck();
@@ -482,6 +489,8 @@ static int nfq_main(void)
 exok:
 	res=0;
 ex:
+	free(mod);
+	free(buf);
 	nfq_deinit(&h, &qh);
 	lua_shutdown();
 #ifdef HAS_FILTER_SSID
@@ -1649,7 +1658,7 @@ static void exithelp(void)
 	*all_protos=0;
 	for (t_l7proto pr=0 ; pr<L7_LAST; pr++)
 	{
-		if (pr) strncat(all_protos, " ", sizeof(all_protos)-1-1);
+		if (pr) strncat(all_protos, " ", sizeof(all_protos)-strlen(all_protos)-1);
 		strncat(all_protos, l7proto_str(pr), sizeof(all_protos)-strlen(all_protos)-1);
 	}
 
@@ -1722,7 +1731,7 @@ static void exithelp(void)
 		" --lua-init=@<filename>|<lua_text>\t\t\t; load LUA program from a file or string. if multiple parameters present order of execution is preserved. gzipped files are supported.\n"
 		" --lua-gc=<int>\t\t\t\t\t\t; forced garbage collection every N sec. default %u sec. triggers only when a packet arrives. 0 = disable.\n"
 		"\nMULTI-STRATEGY:\n"
-		" --new[=<name>]\t\t\t\t\t\t\t; begin new profile. optionally set name\n"
+		" --new[=<name>]\t\t\t\t\t\t; begin new profile. optionally set name\n"
 		" --skip\t\t\t\t\t\t\t; do not use this profile\n"
 		" --name=<name>\t\t\t\t\t\t; set profile name\n"
 		" --template[=<name>]\t\t\t\t\t; use this profile as template (must be named or will be useless)\n"
