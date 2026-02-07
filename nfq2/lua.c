@@ -1508,9 +1508,11 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 
 	// assume ipv6 packet structure was already checked for validity
 	size_t hdrlen;
+	lua_Integer idx = 1;
 	uint8_t HeaderType, *data;
 	uint16_t plen;
-	lua_Integer idx = 1;
+	uint16_t fr_off=0;
+	bool fr=false;
 
 	lua_pushliteral(L, "exthdr");
 	lua_newtable(L);
@@ -1521,7 +1523,7 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 		len-=sizeof(struct ip6_hdr);
 		plen = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
 		if (plen < len) len = plen;
-		while (len > 0) // need at least one byte for NextHeader field
+		while (len && !(fr && fr_off)) // need at least one byte for NextHeader field. stop after fragment header if not first fragment
 		{
 			switch (HeaderType)
 			{
@@ -1536,6 +1538,8 @@ void lua_pushf_ip6exthdr(lua_State *L, const struct ip6_hdr *ip6, size_t len)
 				break;
 			case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
 				hdrlen = 8;
+				fr_off = ntohs(((struct ip6_frag*)data)->ip6f_offlg & IP6F_OFF_MASK);
+				fr = ((struct ip6_frag*)data)->ip6f_offlg & (IP6F_OFF_MASK|IP6F_MORE_FRAG);
 				break;
 			case IPPROTO_AH:
 				// special case. length in ah header is in 32-bit words minus 2
@@ -1618,17 +1622,18 @@ void lua_push_dissect(lua_State *L, const struct dissect *dis)
 
 	if (dis)
 	{
-		lua_createtable(L, 0, 10);
-		lua_pushf_iphdr(L,dis->ip, dis->len_l3);
-		lua_pushf_ip6hdr(L,dis->ip6, dis->len_l3);
-		lua_pushf_tcphdr(L,dis->tcp, dis->len_l4);
-		lua_pushf_udphdr(L,dis->udp, dis->len_l4);
-		lua_pushf_icmphdr(L,dis->icmp, dis->len_l4);
+		lua_createtable(L, 0, 10+dis->frag);
 		lua_pushf_int(L,"l4proto",dis->proto);
 		lua_pushf_int(L,"transport_len",dis->transport_len);
 		lua_pushf_int(L,"l3_len",dis->len_l3);
 		lua_pushf_int(L,"l4_len",dis->len_l4);
 		lua_pushf_raw(L,"payload",dis->data_payload,dis->len_payload);
+		if (dis->frag) lua_pushf_int(L,"frag_off",dis->frag_off);
+		lua_pushf_iphdr(L,dis->ip, dis->len_l3);
+		lua_pushf_ip6hdr(L,dis->ip6, dis->len_l3);
+		lua_pushf_tcphdr(L,dis->tcp, dis->len_l4);
+		lua_pushf_udphdr(L,dis->udp, dis->len_l4);
+		lua_pushf_icmphdr(L,dis->icmp, dis->len_l4);
 	}
 	else
 		lua_pushnil(L);
@@ -2383,10 +2388,23 @@ bool lua_reconstruct_dissect(lua_State *L, int idx, uint8_t *buf, size_t *len, b
 	struct udphdr *udp=NULL;
 	struct icmp46 *icmp=NULL;
 	const char *p;
+	bool frag;
 
 	LUA_STACK_GUARD_ENTER(L)
 
 	idx = lua_absindex(L, idx);
+
+	lua_getfield(L,idx,"frag_off");
+	if (lua_type(L,-1)!=LUA_TNIL)
+	{
+		luaL_checkinteger(L,-1); // verify type
+		frag = true;
+	}
+	else
+		frag = false;
+	lua_pop(L, 1);
+
+	if (frag) ip6_preserve_next = true; // there's no other source of next. no tcp, no udp, no icmp headers. just raw ip payload
 
 	lua_getfield(L,idx,"ip");
 	l = left;
@@ -2416,150 +2434,181 @@ bool lua_reconstruct_dissect(lua_State *L, int idx, uint8_t *buf, size_t *len, b
 	data+=l; left-=l;
 	lua_pop(L, 1);
 
-	lua_getfield(L,idx,"tcp");
-	l=0;
-	if (lua_type(L,-1)==LUA_TTABLE)
+	if (frag)
 	{
-		l = left;
-		tcp = (struct tcphdr*)data;
-		if (!lua_reconstruct_tcphdr(L, -1, tcp, &l))
+		lua_getfield(L,idx,"payload");
+		p = lua_tolstring(L,-1,&lpayload);
+		if (p)
 		{
-			DLOG_ERR("reconstruct_dissect: bad tcp\n");
-			goto err;
+			if (lpayload>0xFFFF)
+			{
+				DLOG_ERR("reconstruct_dissect: payload too large : %zu\n",lpayload);
+				goto err;
+			}
+			if (left<lpayload)
+			{
+				DLOG_ERR("reconstruct_dissect: payload does not fit into the buffer : payload %zu buffer_left %zu\n",lpayload,left);
+				goto err;
+			}
+			memcpy(data,p,lpayload);
+			data+=lpayload; left-=lpayload;
 		}
+		else
+			lpayload = 0;
+		lua_pop(L, 1);
+		l = data-buf;
 	}
 	else
 	{
-		lua_pop(L, 1);
-		lua_getfield(L,idx,"udp");
+		lua_getfield(L,idx,"tcp");
+		l=0;
 		if (lua_type(L,-1)==LUA_TTABLE)
 		{
-			l = sizeof(struct udphdr);
-			udp = (struct udphdr*)data;
-			if (!lua_reconstruct_udphdr(L, -1, udp))
+			l = left;
+			tcp = (struct tcphdr*)data;
+			if (!lua_reconstruct_tcphdr(L, -1, tcp, &l))
 			{
-				DLOG_ERR("reconstruct_dissect: bad udp\n");
+				DLOG_ERR("reconstruct_dissect: bad tcp\n");
 				goto err;
 			}
 		}
 		else
 		{
 			lua_pop(L, 1);
-			lua_getfield(L,idx,"icmp");
+			lua_getfield(L,idx,"udp");
 			if (lua_type(L,-1)==LUA_TTABLE)
 			{
-				l = sizeof(struct icmp46);
-				icmp = (struct icmp46*)data;
-				if (!lua_reconstruct_icmphdr(L, -1, icmp))
+				l = sizeof(struct udphdr);
+				udp = (struct udphdr*)data;
+				if (!lua_reconstruct_udphdr(L, -1, udp))
 				{
-					DLOG_ERR("reconstruct_dissect: bad icmp\n");
+					DLOG_ERR("reconstruct_dissect: bad udp\n");
 					goto err;
 				}
 			}
-		}
-	}
-	data+=l; left-=l;
-	lua_pop(L, 1);
-
-	lua_getfield(L,idx,"payload");
-	p = lua_tolstring(L,-1,&lpayload);
-	if (p)
-	{
-		if (lpayload>0xFFFF)
-		{
-			DLOG_ERR("reconstruct_dissect: invalid payload length\n");
-			goto err;
-		}
-		if (left<lpayload) goto err;
-		memcpy(data,p,lpayload);
-		data+=lpayload; left-=lpayload;
-	}
-	else
-		lpayload = 0;
-	lua_pop(L, 1);
-
-	l = data-buf;
-
-	if (!keepsum)
-	{
-		if (tcp)
-		{
-			tcp_fix_checksum(tcp,l-l3,ip,ip6);
-			if (badsum) tcp->th_sum ^= 1 + (random() % 0xFFFF);
-		}
-		else if (udp)
-		{
-			sz = (uint16_t)(lpayload+sizeof(struct udphdr));
-			if (sz>0xFFFF)
+			else
 			{
-				DLOG_ERR("reconstruct_dissect: invalid payload length\n");
+				lua_pop(L, 1);
+				lua_getfield(L,idx,"icmp");
+				if (lua_type(L,-1)==LUA_TTABLE)
+				{
+					l = sizeof(struct icmp46);
+					icmp = (struct icmp46*)data;
+					if (!lua_reconstruct_icmphdr(L, -1, icmp))
+					{
+						DLOG_ERR("reconstruct_dissect: bad icmp\n");
+						goto err;
+					}
+				}
+			}
+		}
+		data+=l; left-=l;
+		lua_pop(L, 1);
+
+		lua_getfield(L,idx,"payload");
+		p = lua_tolstring(L,-1,&lpayload);
+		if (p)
+		{
+			if (lpayload>0xFFFF)
+			{
+				DLOG_ERR("reconstruct_dissect: payload too large : %zu\n",lpayload);
 				goto err;
 			}
-			udp->uh_ulen = htons((uint16_t)sz);
-			udp_fix_checksum(udp,l-l3,ip,ip6);
-			if (badsum) udp->uh_sum ^= 1 + (random() % 0xFFFF);
-		}
-		else if (icmp)
-		{
-			icmp_fix_checksum(icmp,l-l3,ip6);
-			if (badsum) icmp->icmp_cksum ^= 1 + (random() % 0xFFFF);
-		}
-	}
-
-	if (ip)
-	{
-		if (ntohs(ip->ip_off) & (IP_OFFMASK|IP_MF))
-		{
-			// fragmentation. caller should set ip_len, ip_off and IP_MF correctly. C code moves and shrinks constructed ip payload
-			uint16_t iplen = ntohs(ip->ip_len);
-			uint16_t off = (ntohs(ip->ip_off) & IP_OFFMASK)<<3;
-			size_t frag_start = l3 + off;
-			if (iplen<l3 || iplen>l)
+			if (left<lpayload)
 			{
-				DLOG_ERR("ipv4 frag : invalid ip_len\n");
+				DLOG_ERR("reconstruct_dissect: payload does not fit into the buffer : payload %zu buffer_left %zu\n",lpayload,left);
 				goto err;
 			}
-			if (frag_start>l)
-			{
-				DLOG_ERR("ipv4 frag : fragment offset is outside of the packet\n");
-				goto err;
-			}
-			if (off) memmove(buf+l3,buf+l3+off,iplen-l3);
-			l = iplen; // shrink packet to iplen
+			memcpy(data,p,lpayload);
+			data+=lpayload; left-=lpayload;
 		}
 		else
-			ip->ip_len = htons((uint16_t)l);
-		ip4_fix_checksum(ip);
-	}
-	else if (ip6)
-	{
-		// data points to reconstructed packet's end
-		uint8_t *frag = proto_find_ip6_exthdr(ip6, l, IPPROTO_FRAGMENT);
-		if (frag)
-		{
-			uint16_t plen = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen); // without ipv6 base header
-			uint16_t off = ntohs(((struct ip6_frag *)frag)->ip6f_offlg) & 0xFFF8;
-			uint8_t *endfrag = frag + 8;
-			size_t size_unfragmentable = endfrag - (uint8_t*)ip6 - sizeof(struct ip6_hdr);
+			lpayload = 0;
+		lua_pop(L, 1);
 
-			if (size_unfragmentable > plen)
+		l = data-buf;
+
+		if (!keepsum)
+		{
+			if (tcp)
 			{
-				DLOG_ERR("ipv6 frag : invalid ip6_plen\n");
-				goto err;
+				tcp_fix_checksum(tcp,l-l3,ip,ip6);
+				if (badsum) tcp->th_sum ^= 1 + (random() % 0xFFFF);
 			}
-			size_t size_fragmentable = plen - size_unfragmentable;
-			if ((endfrag + off + size_fragmentable) > data)
+			else if (udp)
 			{
-				DLOG_ERR("ipv6 frag : fragmentable part is outside of the packet\n");
-				goto err;
+				sz = (uint16_t)(lpayload+sizeof(struct udphdr));
+				if (sz>0xFFFF)
+				{
+					DLOG_ERR("reconstruct_dissect: invalid payload length\n");
+					goto err;
+				}
+				udp->uh_ulen = htons((uint16_t)sz);
+				udp_fix_checksum(udp,l-l3,ip,ip6);
+				if (badsum) udp->uh_sum ^= 1 + (random() % 0xFFFF);
 			}
-			if (off) memmove(endfrag, endfrag + off, size_fragmentable);
-			l = sizeof(struct ip6_hdr) + plen;
+			else if (icmp)
+			{
+				icmp_fix_checksum(icmp,l-l3,ip6);
+				if (badsum) icmp->icmp_cksum ^= 1 + (random() % 0xFFFF);
+			}
 		}
-		else
-			ip6->ip6_ctlun.ip6_un1.ip6_un1_plen = htons((uint16_t)(l-sizeof(struct ip6_hdr)));
+
+		if (ip)
+		{
+			if (ntohs(ip->ip_off) & (IP_OFFMASK|IP_MF))
+			{
+				// fragmentation. caller should set ip_len, ip_off and IP_MF correctly. C code moves and shrinks constructed ip payload
+				uint16_t iplen = ntohs(ip->ip_len);
+				uint16_t off = (ntohs(ip->ip_off) & IP_OFFMASK)<<3;
+				size_t frag_start = l3 + off;
+				if (iplen<l3 || iplen>l)
+				{
+					DLOG_ERR("ipv4 frag : invalid ip_len\n");
+					goto err;
+				}
+				if (frag_start>l)
+				{
+					DLOG_ERR("ipv4 frag : fragment offset is outside of the packet\n");
+					goto err;
+				}
+				if (off) memmove(buf+l3,buf+l3+off,iplen-l3);
+				l = iplen; // shrink packet to iplen
+			}
+			else
+				ip->ip_len = htons((uint16_t)l);
+			ip4_fix_checksum(ip);
+		}
+		else if (ip6)
+		{
+			// data points to reconstructed packet's end
+			uint8_t *frag = proto_find_ip6_exthdr(ip6, l, IPPROTO_FRAGMENT);
+			if (frag)
+			{
+				uint16_t plen = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen); // without ipv6 base header
+				uint16_t off = ntohs(((struct ip6_frag *)frag)->ip6f_offlg) & 0xFFF8;
+				uint8_t *endfrag = frag + 8;
+				size_t size_unfragmentable = endfrag - (uint8_t*)ip6 - sizeof(struct ip6_hdr);
+
+				if (size_unfragmentable > plen)
+				{
+					DLOG_ERR("ipv6 frag : invalid ip6_plen\n");
+					goto err;
+				}
+				size_t size_fragmentable = plen - size_unfragmentable;
+				if ((endfrag + off + size_fragmentable) > data)
+				{
+					DLOG_ERR("ipv6 frag : fragmentable part is outside of the packet\n");
+					goto err;
+				}
+				if (off) memmove(endfrag, endfrag + off, size_fragmentable);
+				l = sizeof(struct ip6_hdr) + plen;
+			}
+			else
+				ip6->ip6_ctlun.ip6_un1.ip6_un1_plen = htons((uint16_t)(l-sizeof(struct ip6_hdr)));
+		}
 	}
-	
+
 	*len = l;
 	LUA_STACK_GUARD_LEAVE(L, 0)
 	return true;

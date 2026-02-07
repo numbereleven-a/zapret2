@@ -114,7 +114,7 @@ const struct in6_addr *mask_from_bitcount6(uint32_t zct);
 #elif defined(CLOCK_UPTIME)
 #define CLOCK_BOOT_OR_UPTIME CLOCK_UPTIME
 #else
-#define CLOCK_BOOT_OR_UPTIME CLOCK_MONOTINIC
+#define CLOCK_BOOT_OR_UPTIME CLOCK_MONOTONIC
 #endif
 
 time_t boottime(void);

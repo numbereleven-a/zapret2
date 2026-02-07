@@ -228,3 +228,7 @@ nfqws2: bt and utp_bt protocol detectors
 nfqws2: localtime,gmtime,timelocal,timegm luacalls
 winws2: load wlanapi.dll dynamically only if needed
 winws2: fixed lost windivert deinit on logical network disappear
+
+0.9.3
+
+nfqws2: handling of incoming fragmented packets (no reconstruct, raw ip payload)

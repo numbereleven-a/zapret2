@@ -188,7 +188,10 @@ static void packet_debug(bool replay, const struct dissect *dis)
 			{
 				char s_proto[16];
 				str_proto_name(s_proto,sizeof(s_proto),dis->proto);
-				DLOG("\nIP PROTO %s: len=%zu : ", s_proto, dis->len_payload);
+				if (dis->frag)
+					DLOG("\nIP FRAG off=%u PROTO %s: len=%zu : ", dis->frag_off, s_proto, dis->len_payload);
+				else
+					DLOG("\nIP PROTO %s: len=%zu : ", s_proto, dis->len_payload);
 				hexdump_limited_dlog(dis->data_payload, dis->len_payload, PKTDATA_MAXDUMP);
 				DLOG("\n");
 			}
@@ -2099,36 +2102,27 @@ static uint8_t dpi_desync_packet_play(
 	if (!!dis.ip != !!dis.ip6)
 	{
 		packet_debug(!!replay_piece_count, &dis);
+
 		// fix csum if unmodified and if OS can pass wrong csum to queue (depends on OS)
 		// modified means we have already fixed the checksum or made it invalid intentionally
 		// this is the only point we VIOLATE const to fix the checksum in the original buffer to avoid copying to mod_pkt
-		switch (dis.proto)
+		if (dis.tcp)
 		{
-		case IPPROTO_TCP:
-			if (dis.tcp)
-			{
-				verdict = dpi_desync_tcp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
-				verdict_tcp_csum_fix(verdict, (struct tcphdr *)dis.tcp, dis.transport_len, dis.ip, dis.ip6);
-			}
-			break;
-		case IPPROTO_UDP:
-			if (dis.udp)
-			{
-				verdict = dpi_desync_udp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
-				verdict_udp_csum_fix(verdict, (struct udphdr *)dis.udp, dis.transport_len, dis.ip, dis.ip6);
-			}
-			break;
-		case IPPROTO_ICMP:
-		case IPPROTO_ICMPV6:
-			if (dis.icmp)
-			{
-				verdict = dpi_desync_icmp_packet(fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
-				verdict_icmp_csum_fix(verdict, (struct icmp46 *)dis.icmp, dis.transport_len, dis.ip6);
-			}
-			break;
-		default:
-			verdict = dpi_desync_ip_packet(fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
+			verdict = dpi_desync_tcp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
+			verdict_tcp_csum_fix(verdict, (struct tcphdr *)dis.tcp, dis.transport_len, dis.ip, dis.ip6);
 		}
+		else if (dis.udp)
+		{
+			verdict = dpi_desync_udp_packet_play(replay_piece, replay_piece_count, reasm_offset, fwmark, ifin, ifout, tpos, &dis, mod_pkt, len_mod_pkt);
+			verdict_udp_csum_fix(verdict, (struct udphdr *)dis.udp, dis.transport_len, dis.ip, dis.ip6);
+		}
+		else if (dis.icmp)
+		{
+			verdict = dpi_desync_icmp_packet(fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
+			verdict_icmp_csum_fix(verdict, (struct icmp46 *)dis.icmp, dis.transport_len, dis.ip6);
+		}
+		else
+			verdict = dpi_desync_ip_packet(fwmark, ifin, ifout, &dis, mod_pkt, len_mod_pkt);
 	}
 	else
 		DLOG("invalid packet - neither ipv4 or ipv6\n");

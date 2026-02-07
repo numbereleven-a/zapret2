@@ -932,11 +932,11 @@ function apply_fooling(desync, dis, fooling_options)
 		local bin
 		if fooling_options.ip6_hopbyhop then
 			bin = prepare_bin(fooling_options.ip6_hopbyhop,"\x00\x00\x00\x00\x00\x00")
-			insert_ip6_exthdr(dis.ip6,nil,IPPROTO_HOPOPTS,bin)
+			insert_ip6_exthdr(dis.ip6,1,IPPROTO_HOPOPTS,bin)
 		end
 		if fooling_options.ip6_hopbyhop2 then
 			bin = prepare_bin(fooling_options.ip6_hopbyhop2,"\x00\x00\x00\x00\x00\x00")
-			insert_ip6_exthdr(dis.ip6,nil,IPPROTO_HOPOPTS,bin)
+			insert_ip6_exthdr(dis.ip6,1,IPPROTO_HOPOPTS,bin)
 		end
 		-- for possible unfragmentable part
 		if fooling_options.ip6_destopt then
@@ -1094,7 +1094,7 @@ end
 
 -- option : ipfrag.ipfrag_disorder - send fragments from last to first
 function rawsend_dissect_ipfrag(dis, options)
-	if options and options.ipfrag and options.ipfrag.ipfrag then
+	if options and options.ipfrag and options.ipfrag.ipfrag and not dis.frag then
 		local frag_func = options.ipfrag.ipfrag=="" and "ipfrag2" or options.ipfrag.ipfrag
 		if type(_G[frag_func]) ~= "function" then
 			error("rawsend_dissect_ipfrag: ipfrag function '"..tostring(frag_func).."' does not exist")

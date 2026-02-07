@@ -383,9 +383,11 @@ bool proto_check_ipv4_payload(const uint8_t *data, size_t len)
 	return len >= ntohs(((struct ip*)data)->ip_len);
 }
 // move to transport protocol
-void proto_skip_ipv4(const uint8_t **data, size_t *len)
+void proto_skip_ipv4(const uint8_t **data, size_t *len, bool *frag, uint16_t *frag_off)
 {
 	uint8_t off = ((struct ip*)*data)->ip_hl << 2;
+	if (frag_off) *frag_off = (ntohs(((struct ip*)*data)->ip_off) & IP_OFFMASK) << 3;
+	if (frag) *frag = ntohs(((struct ip*)*data)->ip_off) & (IP_OFFMASK|IP_MF);
 	*data += off;
 	*len -= off;
 }
@@ -434,21 +436,25 @@ bool proto_check_ipv6_payload(const uint8_t *data, size_t len)
 }
 // move to transport protocol
 // proto_type = 0 => error
-void proto_skip_ipv6(const uint8_t **data, size_t *len, uint8_t *proto_type)
+void proto_skip_ipv6(const uint8_t **data, size_t *len, uint8_t *proto_type, bool *frag, uint16_t *frag_off)
 {
 	size_t hdrlen;
-	uint8_t HeaderType;
-	uint16_t plen;
 	struct ip6_hdr *ip6 = (struct ip6_hdr*)*data;
+	uint16_t plen;
+	uint16_t fr_off=0;
+	bool fr=false;
+	uint8_t HeaderType;
 
 	if (proto_type) *proto_type = 0; // put error in advance
+	if (frag) *frag = false;
+	if (frag_off) *frag_off = 0;
 
 	HeaderType = ip6->ip6_nxt;
 	if (proto_type) *proto_type = HeaderType;
 	plen = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
 	*data += sizeof(struct ip6_hdr); *len -= sizeof(struct ip6_hdr); // skip ipv6 base header
 	if (plen < *len) *len = plen;
-	while (*len) // need at least one byte for NextHeader field
+	while (*len && !(fr && fr_off)) // need at least one byte for NextHeader field. stop after fragment header if not first fragment
 	{
 		switch (HeaderType)
 		{
@@ -463,6 +469,11 @@ void proto_skip_ipv6(const uint8_t **data, size_t *len, uint8_t *proto_type)
 			break;
 		case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
 			hdrlen = 8;
+			if (*len < hdrlen) return; // error
+			fr_off = ntohs(((struct ip6_frag*)*data)->ip6f_offlg & IP6F_OFF_MASK);
+			fr = ((struct ip6_frag*)*data)->ip6f_offlg & (IP6F_OFF_MASK|IP6F_MORE_FRAG);
+			if (frag_off) *frag_off = fr_off;
+			if (frag) *frag = fr;
 			break;
 		case IPPROTO_AH:
 			// special case. length in ah header is in 32-bit words minus 2
@@ -488,8 +499,10 @@ void proto_skip_ipv6(const uint8_t **data, size_t *len, uint8_t *proto_type)
 uint8_t *proto_find_ip6_exthdr(struct ip6_hdr *ip6, size_t len, uint8_t proto)
 {
 	size_t hdrlen;
-	uint8_t HeaderType, last_proto, *data;
 	uint16_t plen;
+	uint8_t HeaderType, last_proto, *data;
+	bool fr=false;
+	uint16_t fr_off=0;
 
 	if (len<sizeof(struct ip6_hdr)) return false;
 	plen = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
@@ -497,7 +510,7 @@ uint8_t *proto_find_ip6_exthdr(struct ip6_hdr *ip6, size_t len, uint8_t proto)
 	data = (uint8_t*)(ip6+1);
 	len -= sizeof(struct ip6_hdr);
 	if (plen < len) len = plen;
-	while (len) // need at least one byte for NextHeader field
+	while (len && !(fr && fr_off)) // need at least one byte for NextHeader field. stop after fragment header if not first fragment
 	{
 		if (last_proto==proto) return data; // found
 		switch (last_proto)
@@ -513,6 +526,8 @@ uint8_t *proto_find_ip6_exthdr(struct ip6_hdr *ip6, size_t len, uint8_t proto)
 			break;
 		case IPPROTO_FRAGMENT: // fragment. length fixed to 8, hdrlen field defined as reserved
 			hdrlen = 8;
+			fr_off = ntohs(((struct ip6_frag*)data)->ip6f_offlg & IP6F_OFF_MASK);
+			fr = ((struct ip6_frag*)data)->ip6f_offlg & (IP6F_OFF_MASK|IP6F_MORE_FRAG);
 			break;
 		case IPPROTO_AH:
 			// special case. length in ah header is in 32-bit words minus 2
@@ -546,14 +561,14 @@ void proto_dissect_l3l4(const uint8_t *data, size_t len, struct dissect *dis, bo
 		dis->ip = (const struct ip *) data;
 		dis->proto = dis->ip->ip_p;
 		p = data;
-		proto_skip_ipv4(&data, &len);
+		proto_skip_ipv4(&data, &len, &dis->frag, &dis->frag_off);
 		dis->len_l3 = data-p;
 	}
 	else if (proto_check_ipv6(data, len) && (no_payload_check || proto_check_ipv6_payload(data, len)))
 	{
 		dis->ip6 = (const struct ip6_hdr *) data;
 		p = data;
-		proto_skip_ipv6(&data, &len, &dis->proto);
+		proto_skip_ipv6(&data, &len, &dis->proto, &dis->frag, &dis->frag_off);
 		dis->len_l3 = data-p;
 	}
 	else
@@ -562,31 +577,31 @@ void proto_dissect_l3l4(const uint8_t *data, size_t len, struct dissect *dis, bo
 	}
 
 	dis->transport_len = len;
+	dis->len_l4 = 0;
 
-	if (dis->proto==IPPROTO_TCP && proto_check_tcp(data, len))
+	if (!dis->frag)
 	{
-		dis->tcp = (const struct tcphdr *) data;
-		p = data;
-		proto_skip_tcp(&data, &len);
-		dis->len_l4 = data-p;
-	}
-	else if (dis->proto==IPPROTO_UDP && proto_check_udp(data, len) && (no_payload_check || proto_check_udp_payload(data, len)))
-	{
-		dis->udp = (const struct udphdr *) data;
-		p = data;
-		proto_skip_udp(&data, &len);
-		dis->len_l4 = data-p;
-	}
-	else if ((dis->proto==IPPROTO_ICMP || dis->proto==IPPROTO_ICMPV6) && proto_check_icmp(data, len))
-	{
-		dis->icmp = (const struct icmp46 *) data;
-		p = data;
-		proto_skip_icmp(&data, &len);
-		dis->len_l4 = data-p;
-	}
-	else
-	{
-		dis->len_l4 = 0;
+		if (dis->proto==IPPROTO_TCP && proto_check_tcp(data, len))
+		{
+			dis->tcp = (const struct tcphdr *) data;
+			p = data;
+			proto_skip_tcp(&data, &len);
+			dis->len_l4 = data-p;
+		}
+		else if (dis->proto==IPPROTO_UDP && proto_check_udp(data, len) && (no_payload_check || proto_check_udp_payload(data, len)))
+		{
+			dis->udp = (const struct udphdr *) data;
+			p = data;
+			proto_skip_udp(&data, &len);
+			dis->len_l4 = data-p;
+		}
+		else if ((dis->proto==IPPROTO_ICMP || dis->proto==IPPROTO_ICMPV6) && proto_check_icmp(data, len))
+		{
+			dis->icmp = (const struct icmp46 *) data;
+			p = data;
+			proto_skip_icmp(&data, &len);
+			dis->len_l4 = data-p;
+		}
 	}
 
 	dis->data_payload = data;
