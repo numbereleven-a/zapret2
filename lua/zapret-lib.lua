@@ -29,8 +29,11 @@ function luaexec(ctx, desync)
 	end
 	-- allow dynamic code to access desync
 	_G.desync = desync
-	_G[fname]()
+	local res, err = pcall(_G[fname])
 	_G.desync = nil
+	if not res then
+		error(err);
+	end
 end
 
 -- basic desync function
