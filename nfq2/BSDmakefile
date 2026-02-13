@@ -1,7 +1,7 @@
 CC ?= cc
 PKG_CONFIG ?= pkg-config
 OPTIMIZE ?= -Oz
-MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections
 CFLAGS += -std=gnu99 -s $(OPTIMIZE) $(MINSIZE) -Wno-address-of-packed-member
 LDFLAGS += -flto=auto -Wl,--gc-sections
 LIBS = -lz -lm

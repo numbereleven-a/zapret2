@@ -1,7 +1,7 @@
 CC ?= cc
 PKG_CONFIG ?= pkg-config
 OPTIMIZE ?= -Os
-MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections
 CFLAGS += -std=gnu99 $(OPTIMIZE) $(MINSIZE)
 CFLAGS_LINUX = -Wno-alloc-size-larger-than
 CFLAGS_SYSTEMD = -DUSE_SYSTEMD
