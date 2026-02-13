@@ -1,13 +1,15 @@
 CC ?= cc
 PKG_CONFIG ?= pkg-config
 OPTIMIZE ?= -Os
-CFLAGS += -std=gnu99 $(OPTIMIZE) -flto=auto -Wl,--gc-sections
+MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+CFLAGS += -std=gnu99 $(OPTIMIZE) $(MINSIZE)
 CFLAGS_LINUX = -Wno-alloc-size-larger-than
 CFLAGS_SYSTEMD = -DUSE_SYSTEMD
 CFLAGS_BSD = -Wno-address-of-packed-member
 CFLAGS_CYGWIN = -Wno-address-of-packed-member -static
 CFLAGS_CYGWIN32 =
 CFLAGS_UBSAN = -fsanitize=undefined,alignment -fno-sanitize-recover=undefined,alignment
+LDFLAGS += -flto=auto -Wl,--gc-sections
 LDFLAGS_ANDROID = -llog
 LIBS =
 LIBS_LINUX = -lz -lnetfilter_queue -lnfnetlink -lmnl -lm

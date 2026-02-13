@@ -26,32 +26,20 @@ jobs:
             tool: aarch64-unknown-linux-musl
           - arch: arm
             tool: arm-unknown-linux-musleabi
-          # - arch: armhf
-          #   tool: arm-unknown-linux-musleabihf
-          # - arch: armv7
-          #   tool: armv7-unknown-linux-musleabi
-          # - arch: armv7hf
-          #   tool: armv7-unknown-linux-musleabihf
-          # - arch: mips64el
-          #   tool: mips64el-unknown-linux-musl
           - arch: mips64
             tool: mips64-unknown-linux-musl
-          # - arch: mipsel
-          #   tool: mipsel-unknown-linux-musl
           - arch: mipselsf
             tool: mipsel-unknown-linux-muslsf
-          # - arch: mips
-          #   tool: mips-unknown-linux-musl
           - arch: mipssf
             tool: mips-unknown-linux-muslsf
-          # - arch: ppc64
-          #   tool: powerpc64-unknown-linux-musl
           - arch: ppc
             tool: powerpc-unknown-linux-musl
           - arch: x86
             tool: i586-unknown-linux-musl
           - arch: x86_64
             tool: x86_64-unknown-linux-musl
+          - arch: riscv64
+            tool: riscv64-unknown-linux-musl
           - arch: lexra
             tool: mips-linux
             dir: rsdk-4.6.4-5281-EB-3.10-0.9.33-m32ub-20141001
@@ -69,7 +57,7 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           TOOL: ${{ matrix.tool }}
-          REPO: ${{ matrix.arch == 'lexra' && matrix.repo || 'spvkgn/musl-cross' }}
+          REPO: ${{ matrix.arch == 'lexra' && matrix.repo || 'bol-van/musl-cross' }}
           DIR: ${{ matrix.arch == 'lexra' && matrix.dir || matrix.tool }}
         run: |
           sudo dpkg --add-architecture i386
@@ -98,6 +86,8 @@ jobs:
           LUAJIT_VER: 2.1
           LUAJIT_RELEASE: 2.1-20250826
           LUAJIT_LUAVER: 5.1
+          MINSIZE: -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+          LDMINSIZE: -Wl,--gc-sections -flto=auto
         run: |
           DEPS_DIR=$GITHUB_WORKSPACE/deps
           export CC="$TARGET-gcc"
@@ -107,13 +97,19 @@ jobs:
           export STRIP=$TARGET-strip
           export PKG_CONFIG_PATH=$DEPS_DIR/lib/pkgconfig
           export STAGING_DIR=$RUNNER_TEMP
+          if [ "$ARCH" = lexra ]; then
+            OPTIMIZE=-Os
+          else
+            OPTIMIZE=-Oz
+          fi
+          MINSIZE="$OPTIMIZE $MINSIZE"
 
-          if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == ppc ]] || [[ "$ARCH" == x86 ]] ; then
+          if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == ppc ]] || [[ "$ARCH" == riscv64 ]] || [[ "$ARCH" == x86 ]] ; then
             # use classic lua
             wget -qO- https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz
             (
               cd lua-${LUA_RELEASE}
-              make CC=$CC CFLAGS="-Os -flto=auto -ffunction-sections -fdata-sections -fvisibility=hidden $CFLAGS" linux -j$(nproc)
+              make CC=$CC AR="$AR rc" CFLAGS="$MINSIZE $CFLAGS" LDFLAGS="$LDMINSIZE $LDFLAGS" linux -j$(nproc)
               make install INSTALL_TOP=$DEPS_DIR INSTALL_BIN=$DEPS_DIR/bin INSTALL_INC=$DEPS_DIR/include/lua${LUA_VER} INSTALL_LIB=$DEPS_DIR/lib
             )
             LJIT=0
@@ -131,7 +127,7 @@ jobs:
             esac
             (
               cd luajit2-*
-              make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOSTCC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP CFLAGS="-Os -s -flto=auto -ffunction-sections -fdata-sections -fvisibility=hidden $CFLAGS" -j$(nproc)
+              make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOSTCC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP TARGET_CFLAGS="$MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS" -j$(nproc)
               make install PREFIX= DESTDIR=$DEPS_DIR
             )
             LJIT=1
@@ -147,7 +143,8 @@ jobs:
           for i in libmnl libnfnetlink libnetfilter_queue ; do
             (
               cd $i-*
-              CFLAGS="-Os -flto=auto -ffunction-sections -fdata-sections -fvisibility=hidden $CFLAGS" \
+              CFLAGS="$MINSIZE $CFLAGS" \
+              LDFLAGS="$LDMINSIZE $LDFLAGS" \
               ./configure --prefix= --host=$TARGET --enable-static --disable-shared --disable-dependency-tracking
               make install -j$(nproc) DESTDIR=$DEPS_DIR
             )
@@ -159,7 +156,7 @@ jobs:
             xargs -I{} wget -qO- https://github.com/madler/zlib/archive/refs/tags/{}.tar.gz | tar -xz
           (
             cd zlib-*
-            CFLAGS="-Os -flto=auto $CFLAGS" \
+            CFLAGS="$MINSIZE $CFLAGS" \
             ./configure --prefix= --static
             make install -j$(nproc) DESTDIR=$DEPS_DIR
           )
@@ -170,6 +167,7 @@ jobs:
           install -Dm644 -t $DEPS_DIR/include/sys /usr/include/x86_64-linux-gnu/sys/queue.h /usr/include/sys/capability.h
 
           # zapret2
+          OPTIMIZE=$OPTIMIZE \
           CFLAGS="-DZAPRET_GH_VER=${{ github.ref_name }} -DZAPRET_GH_HASH=${{ github.sha }} -static-libgcc -static -I$DEPS_DIR/include $CFLAGS" \
           LDFLAGS="-L$DEPS_DIR/lib $LDFLAGS" \
           make -C zapret2 LUA_JIT=$LJIT LUA_CFLAGS="$LCFLAGS" LUA_LIB="$LLIB" -j$(nproc)
@@ -220,6 +218,8 @@ jobs:
           LUAJIT_VER: 2.1
           LUAJIT_RELEASE: 2.1-20250826
           LUAJIT_LUAVER: 5.1
+          MINSIZE: -Oz -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+          LDMINSIZE: -Wl,--gc-sections -flto=auto
         run: |
           DEPS_DIR=$GITHUB_WORKSPACE/deps
           export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
@@ -242,7 +242,7 @@ jobs:
           esac
           (
             cd luajit2-*
-            make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOSTCC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP CFLAGS="-Os -flto=auto $CFLAGS" -j$(nproc)
+            make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOSTCC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP TARGET_CFLAGS="$MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS" -j$(nproc)
             make install PREFIX= DESTDIR=$DEPS_DIR
           )
           LJIT=1
@@ -258,7 +258,8 @@ jobs:
           for i in libmnl libnfnetlink libnetfilter_queue ; do
             (
               cd $i-*
-              CFLAGS="-Os -flto=auto -Wno-implicit-function-declaration" \
+              CFLAGS="$MINSIZE -Wno-implicit-function-declaration $CFLAGS" \
+              LDFLAGS="$LDMINSIZE $LDFLAGS" \
               ./configure --prefix= --host=$TARGET --enable-static --disable-shared --disable-dependency-tracking
               make install -j$(nproc) DESTDIR=$DEPS_DIR
             )
@@ -314,12 +315,14 @@ jobs:
           TARGET: ${{ matrix.target }}
           ARCH: ${{ matrix.arch }}
           CC: ${{ matrix.target }}-freebsd11-clang
+          MINSIZE: -Oz -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
+          LDMINSIZE: -Wl,--gc-sections -flto=auto
         run: |
 
           wget -qO- https://github.com/openresty/luajit2/archive/refs/tags/v${LUAJIT_RELEASE}.tar.gz | tar -xz
           (
             cd luajit2-*
-            make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC=gcc CC=$CC CFLAGS="-Os -flto=auto $CFLAGS"
+            make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC=gcc CC=$CC TARGET_CFLAGS="$MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS"
             make install PREFIX= DESTDIR=$DEPS_DIR
           )
 
@@ -390,7 +393,7 @@ jobs:
         uses: cygwin/cygwin-install-action@v4
         with:
           platform: ${{ matrix.arch }}
-          site: ${{ matrix.arch == 'x86_64' && 'http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2024/01/30/231215' || null }}
+          site: ${{ matrix.arch == 'x86_64' && 'http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/64bit/2024/01/30/231215' || 'http://ctm.crouchingtigerhiddenfruitbat.org/pub/cygwin/circa/2022/11/23/063457' }}
           check-sig: 'false'
           packages: >-
             gcc-core
@@ -424,13 +427,15 @@ jobs:
       - name: Build luajit
         env:
           LUAJIT_RELEASE: 2.1-20250826
+          MINSIZE: -Os -flto=auto -ffunction-sections -fdata-sections -fno-unwind-tables
+          LDMINSIZE: -Wl,--gc-sections -flto=auto
         shell: C:\cygwin\bin\bash.exe -eo pipefail '{0}'
         run: >-
           export MAKEFLAGS=-j$(nproc) &&
           wget -q https://github.com/openresty/luajit2/archive/refs/tags/v${LUAJIT_RELEASE}.tar.gz &&
           tar -xzf v${LUAJIT_RELEASE}.tar.gz &&
           rm -f v${LUAJIT_RELEASE}.tar.gz &&
-          make -C luajit2-${LUAJIT_RELEASE} BUILDMODE=static XCFLAGS="-DLUAJIT_DISABLE_FFI -ffat-lto-objects" CFLAGS="-Os -s -flto=auto -ffunction-sections -fdata-sections -fvisibility=hidden" &&
+          make -C luajit2-${LUAJIT_RELEASE} BUILDMODE=static XCFLAGS="-DLUAJIT_DISABLE_FFI -ffat-lto-objects" TARGET_CFLAGS="$MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS" &&
           make -C luajit2-${LUAJIT_RELEASE} install
 
       - name: Build winws
@@ -503,7 +508,7 @@ jobs:
               case $f in
                 *.tar.xz )
                   tar -C $dir -xvf $f && rm $f
-                  if [[ $dir =~ linux ]] && [[ $dir != *-linux-mips64 ]] && [[ $dir != *-linux-lexra ]]; then
+                  if [[ $dir =~ linux ]] && [[ $dir != *-linux-mips64 ]] && [[ $dir != *-linux-lexra ]] && [[ $dir != *-linux-risc ]]; then
                     run_upx $dir/*
                   fi
                   ;;
@@ -532,6 +537,7 @@ jobs:
                 *-linux-mipselsf )      run_dir linux-mipsel ;;
                 *-linux-mipssf )        run_dir linux-mips ;;
                 *-linux-ppc )           run_dir linux-ppc ;;
+                *-linux-riscv64 )       run_dir linux-riscv64 ;;
                 *-linux-x86 )           run_dir linux-x86 ;;
                 *-linux-x86_64 )        run_dir linux-x86_64 ;;
                 *-linux-lexra )         run_dir linux-lexra ;;

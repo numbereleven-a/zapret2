@@ -238,3 +238,5 @@ v0.8.1
 * zapret-lib: replay_execution_plan and plan_clear max parameter
 * init.d: use bitmap:port ipset for standard dports
 * github: reduce executables files size
+* install_bin: added linux-riscv64 scan dir
+* github actions: added linux-riscv64 arch
