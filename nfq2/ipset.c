@@ -114,6 +114,12 @@ static bool AppendIpset(ipset *ips, const char *filename)
 				return false;
 			}
 		}
+		if (ferror(F))
+		{
+			DLOG_PERROR("AppendIpset");
+			fclose(F);
+			return false;
+		}
 		fclose(F);
 	}
 

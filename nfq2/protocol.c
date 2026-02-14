@@ -551,10 +551,14 @@ bool TLSFindExtLenOffsetInHandshake(const uint8_t *data, size_t len, size_t *off
 	l += data[l] + 1;
 	// CipherSuitesLength
 	if (len < (l + 2)) return false;
-	l += (data[0]==0x02 ? 0 : pntoh16(data + l)) + 2;
+	if (data[0]==0x01) // client hello ?
+		l += pntoh16(data + l);
+	l+=2;
 	// CompressionMethodsLength
 	if (len < (l + 1)) return false;
-	l += data[l] + 1;
+	if (data[0]==0x01) // client hello ?
+		l += data[l];
+	l++;
 	// ExtensionsLength
 	if (len < (l + 2)) return false;
 	*off = l;

@@ -2539,7 +2539,7 @@ bool lua_reconstruct_dissect(lua_State *L, int idx, uint8_t *buf, size_t *len, b
 			}
 			else if (udp)
 			{
-				sz = (uint16_t)(lpayload+sizeof(struct udphdr));
+				sz = lpayload+sizeof(struct udphdr);
 				if (sz>0xFFFF)
 				{
 					DLOG_ERR("reconstruct_dissect: invalid payload length\n");

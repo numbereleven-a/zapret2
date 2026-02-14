@@ -71,13 +71,13 @@ static void ReloadCheck()
 		if (!LoadAllHostLists())
 		{
 			DLOG_ERR("hostlists load failed. this is fatal.\n");
-			exit(1);
+			exit(200);
 		}
 		ResetAllIpsetModTime();
 		if (!LoadAllIpsets())
 		{
 			DLOG_ERR("ipset load failed. this is fatal.\n");
-			exit(1);
+			exit(200);
 		}
 		bReload = false;
 	}
@@ -317,22 +317,13 @@ static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *m
 		goto exiterr;
 	}
 
-	DLOG_CONDUP("unbinding existing nf_queue handler for AF_INET (if any)\n");
-	if (nfq_unbind_pf(*h, AF_INET) < 0) {
-		DLOG_PERROR("nfq_unbind_pf()");
-		goto exiterr;
-	}
+	// linux kernels pass both ipv4 and ipv6 even if only AF_INET is boumd
+	// linux 3.8 - bind calls are NOOP.  linux 3.8- - secondary bind to AF_INET6 will fail
 
 	DLOG_CONDUP("binding nfnetlink_queue as nf_queue handler for AF_INET\n");
 	if (nfq_bind_pf(*h, AF_INET) < 0) {
-		DLOG_PERROR("nfq_bind_pf()");
+		DLOG_PERROR("nfq_bind_pf(AF_INET)");
 		goto exiterr;
-	}
-
-	DLOG_CONDUP("binding nfnetlink_queue as nf_queue handler for AF_INET6\n");
-	if (nfq_bind_pf(*h, AF_INET6) < 0) {
-		DLOG_PERROR("nfq_bind_pf()");
-		// do not fail - kernel may not support ipv6
 	}
 
 	DLOG_CONDUP("binding this socket to queue '%u'\n", params.qnum);
@@ -355,7 +346,7 @@ static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *m
 	if (nfq_set_queue_flags(*qh, NFQA_CFG_F_FAIL_OPEN, NFQA_CFG_F_FAIL_OPEN))
 	{
 		DLOG_ERR("can't set queue flags. its OK on linux <3.6\n");
-		// dot not fail. not supported on old linuxes <3.6 
+		// dot not fail. not supported in old linuxes <3.6 
 	}
 
 	int yes = 1, fd = nfq_fd(*h);

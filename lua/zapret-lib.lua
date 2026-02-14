@@ -2125,7 +2125,7 @@ function is_tls_record(tls, offset, ctype, partialOK)
 	if not tls then return false end
 	if not offset then offset=1 end
 
-	if (#tls-offset+1)<6 or (ctype and ctype~=tls_record_type(tls, offset)) then return false end
+	if (#tls-offset+1)<5 or (ctype and ctype~=tls_record_type(tls, offset)) then return false end
 	local f2 = u16(tls, offset+1)
 	return f2>=TLS_VER_SSL30 and f2<=TLS_VER_TLS12 and (partialOK or tls_record_full(tls, offset))
 
@@ -2164,12 +2164,12 @@ function is_tls_handshake(tls, offset, htype, partialOK)
 	if not TLS_HANDSHAKE_TYPE_NAMES[typ] then return false end
 	if typ==TLS_HANDSHAKE_TYPE_CLIENT or typ==TLS_HANDSHAKE_TYPE_SERVER then
 		-- valid tls versions
+		if (#tls-offset+1)<6 then return false end
 		local f2 = u16(tls,offset+4)
 		if f2<TLS_VER_SSL30 or f2>TLS_VER_TLS12 then return false end
 	end
 	-- length fits to data buffer
 	return partialOK or tls_handshake_full(tls, offset)
-
 end
 function is_tls_hello(tls, offset, partialOK)
 	return is_tls_handshake(tls, offset, TLS_HANDSHAKE_TYPE_CLIENT, partialOK) or is_tls_handshake(tls, offset, TLS_HANDSHAKE_TYPE_SERVER, partialOK)
@@ -2448,6 +2448,11 @@ function tls_dissect(tls, offset, partialOK)
 		if typ==TLS_RECORD_TYPE_CHANGE_CIPHER_SPEC then
 			encrypted = true
 		elseif typ==TLS_RECORD_TYPE_HANDSHAKE and not encrypted then
+			-- need 4 bytes for handshake type and 24-bit length
+			if (#tls-offset+1)<9 then
+				if not partialOK then return end
+				break
+			end
 			local htyp = tls_handshake_type(tls, off + 5)
 			tdis.rec[#tdis.rec].htype = htyp
 			if not tdis.handshake then tdis.handshake = {} end
@@ -2477,10 +2482,10 @@ function tls_dissect(tls, offset, partialOK)
 	if tdis.handshake then
 		for htyp, handshake in pairs(tdis.handshake) do
 			if (handshake.type == TLS_HANDSHAKE_TYPE_CLIENT or handshake.type == TLS_HANDSHAKE_TYPE_SERVER) then
-				tls_dissect_handshake(handshake, 1, partialOK)
+				tls_dissect_handshake(handshake, partialOK)
 			end
 		end
-	elseif is_tls_handshake(tls, offset, nil, partialOK) then
+	elseif not tdis.rec and is_tls_handshake(tls, offset, nil, partialOK) then
 		local htyp = tls_handshake_type(tls, offset)
 		tdis.handshake = { [htyp] = { type = htyp, name = TLS_HANDSHAKE_TYPE_NAMES[htyp], data = string.sub(tls, offset, #tls) } }
 		tls_dissect_handshake(tdis.handshake[htyp], partialOK)

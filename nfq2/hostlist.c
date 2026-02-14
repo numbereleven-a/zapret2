@@ -97,6 +97,12 @@ bool AppendHostList(hostlist_pool **hostlist, const char *filename)
 				return false;
 			}
 		}
+		if (ferror(F))
+		{
+			DLOG_PERROR("AppendHostList");
+			fclose(F);
+			return false;
+		}
 		fclose(F);
 	}
 
