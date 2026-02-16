@@ -145,7 +145,6 @@ bool posmarker_parse(const char *s, struct proto_pos *m)
 			m->pos = 0;
 	}
 	return true;
-	
 }
 bool posmarker_list_parse(const char *s, struct proto_pos *m, int *mct)
 {

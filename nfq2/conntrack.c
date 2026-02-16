@@ -140,8 +140,17 @@ static void ConntrackApplyPos(t_ctrack *t, bool bReverse, const struct dissect *
 
 	if (dis->ip6) direct->ip6flow = ntohl(dis->ip6->ip6_ctlun.ip6_un1.ip6_un1_flow);
 
-	scale = tcp_find_scale_factor(dis->tcp);
-	mss = tcp_find_mss(dis->tcp);
+	direct->winsize_calc = direct->winsize = ntohs(dis->tcp->th_win);
+	if (t->pos.state == SYN)
+	{
+		// scale and mss only valid in syn packets
+		scale = tcp_find_scale_factor(dis->tcp);
+		if (scale != SCALE_NONE) direct->scale = scale;
+		direct->mss = tcp_find_mss(dis->tcp);
+	}
+	else if (direct->scale != SCALE_NONE)
+		// apply scale only outside of the SYN stage
+		direct->winsize_calc <<= direct->scale;
 
 	direct->seq_last = ntohl(dis->tcp->th_seq);
 	direct->pos = direct->seq_last + dis->len_payload;
@@ -154,10 +163,6 @@ static void ConntrackApplyPos(t_ctrack *t, bool bReverse, const struct dissect *
 		if (!((direct->pos - direct->uppos) & 0x80000000))
 			direct->uppos = direct->pos;
 	}
-	direct->winsize_calc = direct->winsize = ntohs(dis->tcp->th_win);
-	if (scale != SCALE_NONE) direct->scale = scale;
-	if (direct->scale != SCALE_NONE) direct->winsize_calc <<= direct->scale;
-	if (mss && !direct->mss) direct->mss = mss;
 
 	if (!direct->rseq_over_2G && ((direct->seq_last - direct->seq0) & 0x80000000))
 		direct->rseq_over_2G = true;

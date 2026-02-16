@@ -1901,7 +1901,7 @@ static bool lua_reconstruct_ip6exthdr(lua_State *L, int idx, struct ip6_hdr *ip6
 				lua_getfield(L,-1, "data");
 				if (lua_type(L,-1)!=LUA_TSTRING) goto err;
 				if (!(p=(uint8_t*)lua_tolstring(L,-1,&l))) l=0;
-				if (!l || (l+2)>left || ((type==IPPROTO_AH) ? (l<6 || ((l+2) & 3)) : ((l+2) & 7))) goto err;
+				if (l<6 || (l+2)>left || (type==IPPROTO_AH ? (l>=1024 || ((l+2) & 3)) : (l>=2048 || ((l+2) & 7)))) goto err;
 				memcpy(data+2,p,l);
 				l+=2;
 				data[0] = next; // may be overwritten later
@@ -3470,7 +3470,7 @@ static int luacall_gunzip_inflate(lua_State *L)
 	size_t increment = bufchunk / 2;
 	if (increment < Z_INFL_BUF_INCREMENT) increment = Z_INFL_BUF_INCREMENT;
 
-	do
+	for(;;)
 	{
 		if ((bufsize - size) < BUFMIN)
 		{
@@ -3493,11 +3493,20 @@ static int luacall_gunzip_inflate(lua_State *L)
 		}
 		uzs->zs.avail_out = bufsize - size;
 		uzs->zs.next_out = buf + size;
-		r = inflate(&uzs->zs, Z_NO_FLUSH);
-		if (r != Z_OK && r != Z_STREAM_END) goto zerr;
-		size = bufsize - uzs->zs.avail_out;
-	} while (r == Z_OK && uzs->zs.avail_in);
 
+		r = inflate(&uzs->zs, Z_NO_FLUSH);
+
+		size = bufsize - uzs->zs.avail_out;
+		if (r==Z_STREAM_END) break;
+		if (r==Z_BUF_ERROR)
+		{
+			if (uzs->zs.avail_in)
+				goto zerr;
+			else
+				break; // OK
+		}
+		if (r!=Z_OK) goto zerr;
+	}
 	lua_pushlstring(L, (const char*)buf, size);
 	lua_pushboolean(L, r==Z_STREAM_END);
 end:
@@ -3571,7 +3580,7 @@ static int luacall_gzip_deflate(lua_State *L)
 
 	int argc=lua_gettop(L);
 	size_t l=0;
-	int r;
+	int r, flush;
 	size_t bufsize=0, size=0;
 	uint8_t *buf=NULL, *newbuf;
 	struct userdata_zs *uzs = lua_uzs(L, 1, false);
@@ -3584,7 +3593,8 @@ static int luacall_gzip_deflate(lua_State *L)
 	size_t increment = bufchunk / 2;
 	if (increment < Z_DEFL_BUF_INCREMENT) increment = Z_DEFL_BUF_INCREMENT;
 
-	do
+	flush = l ? Z_NO_FLUSH : Z_FINISH;
+	for(;;)
 	{
 		if ((bufsize - size) < BUFMIN)
 		{
@@ -3607,10 +3617,19 @@ static int luacall_gzip_deflate(lua_State *L)
 		}
 		uzs->zs.avail_out = bufsize - size;
 		uzs->zs.next_out = buf + size;
-		r = deflate(&uzs->zs, l ? Z_NO_FLUSH : Z_FINISH);
-		if (r != Z_OK && r != Z_STREAM_END) goto zerr;
+
+		r = deflate(&uzs->zs, flush);
+
 		size = bufsize - uzs->zs.avail_out;
-	} while (r == Z_OK && (uzs->zs.avail_in || !uzs->zs.avail_out));
+		if (r==Z_STREAM_END) break;
+		if (r==Z_OK)
+		{
+			if (uzs->zs.avail_out && !uzs->zs.avail_in && flush != Z_FINISH)
+				 break;
+		}
+		else
+			goto zerr;
+	}
 
 	lua_pushlstring(L, (const char*)buf, size);
 	lua_pushboolean(L, r==Z_STREAM_END);
@@ -3938,7 +3957,7 @@ static int luaL_doZfile(lua_State *L, const char *filename)
 			luaL_error(L, "could not open lua file '%s'", fname);
 		r = z_readfile(F, &buf, &size, 0);
 		fclose(F);
-		if (r != Z_OK)
+		if (r != Z_STREAM_END)
 			luaL_error(L, "could not unzip lua file '%s'", fname);
 		r = luaL_loadbuffer(L, buf, size, fname);
 		free(buf);

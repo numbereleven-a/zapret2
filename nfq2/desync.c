@@ -1574,8 +1574,9 @@ static uint8_t dpi_desync_tcp_packet_play(
 				if (!bReqFull && ReasmIsEmpty(&ps.ctrack->reasm_client) && !is_retransmission(&ps.ctrack->pos.client))
 				{
 					// do not reconstruct unexpected large payload (they are feeding garbage ?)
+					// also do not reconstruct if server window size is low
 					if (!reasm_client_start(ps.ctrack, IPPROTO_TCP, TLSRecordLen(dis->data_payload), TCP_MAX_REASM, dis->data_payload, dis->len_payload))
-						goto pass_reasm_cancel;
+						goto rediscover;
 				}
 
 				if (!ReasmIsEmpty(&ps.ctrack->reasm_client))
@@ -1601,6 +1602,7 @@ static uint8_t dpi_desync_tcp_packet_play(
 		}
 	}
 
+rediscover:
 	if (!dp_rediscovery(&ps))
 		goto pass_reasm_cancel;
 
@@ -1661,7 +1663,8 @@ static const uint8_t *dns_extract_name(const uint8_t *a, const uint8_t *b, const
 	if (p>=e) return NULL;
 	for (nl=0; *p ;)
 	{
-		if ((p+*p+1)>=e || (*p+1)>=(name_size-nl)) return NULL;
+		// do not support mixed ptr+real
+		if ((*p & 0xC0) || (p+*p+1)>=e || (*p+1)>=(name_size-nl)) return NULL;
 		if (nl)	name[nl++] = '.';
 		memcpy(name + nl, p + 1, *p);
 		nl += *p;

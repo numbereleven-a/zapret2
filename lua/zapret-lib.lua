@@ -805,9 +805,9 @@ function autottl(incoming_ttl, attl)
 
 		if incoming_ttl>223 then
 			orig=255
-		elseif incoming_ttl<128 and incoming_ttl>96 then
+		elseif incoming_ttl<=128 and incoming_ttl>96 then
 			orig=128
-		elseif incoming_ttl<64 and incoming_ttl>32 then
+		elseif incoming_ttl<=64 and incoming_ttl>32 then
 			orig=64
 		else
 			return nil
@@ -1161,16 +1161,15 @@ function rawsend_dissect_segmented(desync, dis, mss, options)
 			local pos=1
 			local len
 			local payload=discopy.payload
-
 			while pos <= #payload do
 				len = #payload - pos + 1
 				if len > max_data then len = max_data end
 				if oob then
 					if urp>=pos and urp<(pos+len)then
-						discopy.tcp.th_flags = bitor(dis.tcp.th_flags, TH_URG)
+						discopy.tcp.th_flags = bitor(discopy.tcp.th_flags, TH_URG)
 						discopy.tcp.th_urp = urp-pos+1
 					else
-						discopy.tcp.th_flags = bitand(dis.tcp.th_flags, bitnot(TH_URG))
+						discopy.tcp.th_flags = bitand(discopy.tcp.th_flags, bitnot(TH_URG))
 						discopy.tcp.th_urp = 0
 					end
 				end
@@ -2449,7 +2448,7 @@ function tls_dissect(tls, offset, partialOK)
 			encrypted = true
 		elseif typ==TLS_RECORD_TYPE_HANDSHAKE and not encrypted then
 			-- need 4 bytes for handshake type and 24-bit length
-			if (#tls-offset+1)<9 then
+			if (#tls-off+1)<9 then
 				if not partialOK then return end
 				break
 			end

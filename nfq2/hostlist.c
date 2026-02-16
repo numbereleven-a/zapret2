@@ -60,7 +60,7 @@ bool AppendHostList(hostlist_pool **hostlist, const char *filename)
 	{
 		r = z_readfile(F,&zbuf,&zsize,0);
 		fclose(F);
-		if (r==Z_OK)
+		if (r==Z_STREAM_END)
 		{
 			DLOG_CONDUP("zlib compression detected. uncompressed size : %zu\n", zsize);
 

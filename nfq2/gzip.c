@@ -40,7 +40,8 @@ int z_readfile(FILE *F, char **buf, size_t *size, size_t extra_alloc)
 		}
 		zs.avail_in = rd;
 		zs.next_in = in;
-		do
+printf("\nCHUNK\n");
+		for(;;)
 		{
 			if ((bufsize - *size) < BUFMIN)
 			{
@@ -55,10 +56,23 @@ int z_readfile(FILE *F, char **buf, size_t *size, size_t extra_alloc)
 			}
 			zs.avail_out = bufsize - *size;
 			zs.next_out = (unsigned char*)(*buf + *size);
+
 			r = inflate(&zs, Z_NO_FLUSH);
-			if (r != Z_OK && r != Z_STREAM_END) goto zerr;
+
 			*size = bufsize - zs.avail_out;
-		} while (r == Z_OK && zs.avail_in);
+			if (r==Z_STREAM_END) break;
+			if (r==Z_BUF_ERROR)
+			{
+				if (zs.avail_in)
+					goto zerr;
+				else
+				{
+					r = Z_OK;
+					break;
+				}
+			}
+			if (r!=Z_OK) goto zerr;
+		}
 	} while (r == Z_OK);
 
 	if (*size < bufsize)
@@ -68,7 +82,7 @@ int z_readfile(FILE *F, char **buf, size_t *size, size_t extra_alloc)
 	}
 
 	inflateEnd(&zs);
-	return Z_OK;
+	return r;
 
 zerr:
 	inflateEnd(&zs);

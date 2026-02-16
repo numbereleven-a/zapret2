@@ -246,3 +246,4 @@ v0.9.4
 * github actions: update upx to 5.1.0. use upx for linux-riscv5
 * github actions: stronger zip and gz compression
 * nfqws2: --chdir
+* nfqws2: fixed wrong scale factor application to winsize
