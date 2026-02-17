@@ -1,0 +1,170 @@
+EXEDIR="$(dirname "$0")"
+EXEDIR="$(cd "$EXEDIR"; pwd)"
+
+TOOLCHAINS="$EXEDIR/toolchain"
+DEPS="$EXEDIR/deps"
+STAGE="$EXEDIR/staging"
+MINSIZE="-Oz -flto=auto -ffunction-sections -fdata-sections"
+LDMINSIZE="-Wl,--gc-sections -flto=auto"
+CFLAGS=""
+LDFLAGS="-lgcc_eh"
+HOSTCC=cc
+LUA_VER="5.5"
+LUA_RELEASE="5.5.0"
+LUAJIT_VER="2.1"
+LUAJIT_RELEASE="2.1-20250826"
+LUAJIT_LUAVER="5.1"
+nproc=$(nproc)
+
+TARGETS="\
+aarch64-unknown-linux-musl \
+arm-unknown-linux-musleabi \
+i586-unknown-linux-musl \
+x86_64-unknown-linux-musl \
+mips-unknown-linux-muslsf \
+mips64-unknown-linux-musl \
+mips64el-unknown-linux-musl \
+mipsel-unknown-linux-muslsf \
+powerpc-unknown-linux-musl \
+riscv64-unknown-linux-musl \
+"
+
+target_has_luajit()
+{
+	case "$1" in
+		aarch64-unknown-linux-musl| \
+		arm-unknown-linux-musleabi| \
+		x86_64-unknown-linux-musl| \
+		mips-unknown-linux-muslsf| \
+		mips64-unknown-linux-musl| \
+		mips64el-unknown-linux-musl| \
+		mipsel-unknown-linux-muslsf| \
+		powerpc-unknown-linux-musl) \
+			return 0
+			;;
+	esac
+	return 1
+}
+
+bsd_files()
+{
+	install -Dm644 -t $STAGING_DIR/include/sys /usr/include/x86_64-linux-gnu/sys/queue.h /usr/include/sys/capability.h
+}
+
+buildenv()
+{
+	# $1 = arch
+
+	export TARGET=$1
+	export CC=$TARGET-gcc
+	export LD=$TARGET-ld
+	export AR=$TARGET-ar
+	export NM=$TARGET-nm
+	export STRIP=$TARGET-strip
+	export STAGING_DIR="$EXEDIR/staging/$TARGET"
+	[ -d "$STAGING_DIR" ] || {
+		mkdir -p "$STAGING_DIR"
+		mkdir -p "$STAGING_DIR/lib/pkgconfig"
+		mkdir -p "$STAGING_DIR/bin"
+		mkdir -p "$STAGING_DIR/include"
+	}
+	export PKG_CONFIG_PATH=$STAGING_DIR/lib/pkgconfig
+	OLDPATH="$PATH"
+	export PATH="$PATH:$TOOLCHAINS/$TARGET/bin"
+}
+buildenv_clear()
+{
+	export PATH="$OLDPATH" TARGET= CC= LD= AR= NM= STRIP= STAGING_DIR= PKG_CONFIG_PATH=
+	OLDPATH=
+}
+
+
+dir_is_not_empty()
+{
+	# $1 - directory
+	local n
+	[ -d "$1" ] || return 1
+	n=$(ls -A "$1" | wc -c | xargs)
+	[ "$n" != 0 ]
+}
+
+find_str_in_list()
+{
+	# $1 - string
+	# $2 - space separated values
+	local v
+	[ -n "$1" ] && {
+		for v in $2; do
+			[ "$v" = "$1" ] && return 0
+		done
+	}
+	return 1
+}
+
+ask_list()
+{
+	# $1 - mode var
+	# $2 - space separated value list
+	# $3 - (optional) default value
+	local M_DEFAULT
+	eval M_DEFAULT="\$$1"
+	local M_DEFAULT_VAR="$M_DEFAULT"
+	local M="" m
+
+	[ -n "$3" ] && { find_str_in_list "$M_DEFAULT" "$2" || M_DEFAULT="$3" ;}
+
+	n=1
+	for m in $2; do
+		echo $n : $m
+		n=$(($n+1))
+	done
+	printf "your choice (default : $M_DEFAULT) : "
+	read m
+	[ -n "$m" ] && M=$(echo $2 | cut -d ' ' -f$m 2>/dev/null)
+	[ -z "$M" ] && M="$M_DEFAULT"
+	echo selected : $M
+	eval $1="\"$M\""
+
+	[ "$M" != "$M_DEFAULT_VAR" ]
+}
+
+ask_target()
+{
+	# $1 = 1 = ask all, otherwise ask only present toolchains
+
+	# already set ?
+	[ -n "$TGT" ] && return
+
+	local d ALL_TARGETS
+	[ "$1" = 1 ] || {
+		if dir_is_not_empty "$TOOLCHAINS"; then
+			for d in "$TOOLCHAINS"/*; do
+				[ -d "$d" ] && {
+					d="$(basename "$d")"
+					ALL_TARGETS="$ALL_TARGETS $d"
+				}
+			done
+		fi
+	}
+	[ -n "$ALL_TARGETS" ] || ALL_TARGETS="$TARGETS"
+
+	echo "select target :"
+	ask_list TARGET "ALL $ALL_TARGETS" "ALL"
+	echo
+	echo selected TARGET : $TARGET
+	echo
+
+	if [ $TARGET = ALL ]; then
+		TGT="$ALL_TARGETS"
+	else
+		TGT="$TARGET"
+	fi
+}
+
+check_toolchains()
+{
+	dir_is_not_empty "$TOOLCHAINS" || {
+		echo DOWNLOAD TOOLCHAINS FIRST
+		exit 1
+	}
+}
