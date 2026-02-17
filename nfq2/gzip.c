@@ -40,7 +40,7 @@ int z_readfile(FILE *F, char **buf, size_t *size, size_t extra_alloc)
 		}
 		zs.avail_in = rd;
 		zs.next_in = in;
-printf("\nCHUNK\n");
+
 		for(;;)
 		{
 			if ((bufsize - *size) < BUFMIN)
