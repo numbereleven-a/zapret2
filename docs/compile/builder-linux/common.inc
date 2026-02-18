@@ -46,13 +46,25 @@ target_has_luajit()
 	return 1
 }
 
-REQD_H_FILES="/usr/include/x86_64-linux-gnu/sys/queue.h /usr/include/sys/capability.h /usr/include/bits/libc-header-start.h"
+REQD_H_FILES="/usr/include/sys/capability.h /usr/include/bits/libc-header-start.h"
+REQD_QUEUE_1="/usr/include/sys/queue.h"
+REQD_QUEUE_2="/usr/include/x86_64-linux-gnu/sys/queue.h"
 check_h_files()
 {
+	[ ! -f "$REQD_QUEUE_1" -a ! -f  "$REQD_QUEUE_2" ] && {
+		echo "could not find $REQD_QUEUE_1 or $REQD_QUEUE_2"
+		help_pkg
+		exit 10
+	}
 	check_file $REQD_H_FILES
 }
 install_h_files()
 {
+	if [ -f "$REQD_QUEUE_1" ]; then
+		install -Dm644 -t $STAGING_DIR/include/sys $REQD_QUEUE_1
+	elif [ -f "$REQD_QUEUE_2" ]; then
+		install -Dm644 -t $STAGING_DIR/include/sys $REQD_QUEUE_2
+	fi
 	install -Dm644 -t $STAGING_DIR/include/sys $REQD_H_FILES
 }
 
@@ -201,12 +213,18 @@ check_toolchains()
 	}
 }
 
+help_pkg()
+{
+	echo "debian/ubuntu: apt install curl xz-utils bzip2 unzip make gcc gcc-multilib libc6-dev libcap-dev pkg-config"
+	echo "fedora: dnf install curl xz bzip2 unzip make gcc glibc-devel glibc-devel.i686 libcap-devel pkg-config"
+}
+
 check_prog()
 {
 	while [ -n "$1" ]; do
 		exists $1 || {
 			echo $1 is not available
-			echo "debian/ubuntu: apt install curl xz-utils bzip2 unzip make gcc gcc-multilib libc6-dev libcap-dev pkg-config"
+			help_pkg
 			exit 10
 		}
 		shift
@@ -217,6 +235,7 @@ check_file()
 	while [ -n "$1" ]; do
 		[ -f "$1" ] || {
 			echo $1 is not available
+			help_pkg
 			exit 10
 		}
 		shift
