@@ -5,7 +5,7 @@ TOOLCHAINS="$EXEDIR/toolchain"
 DEPS="$EXEDIR/deps"
 STAGE="$EXEDIR/staging"
 OPTIMIZE=-Oz
-MINSIZE="$OPTIMIZE -flto=auto -ffunction-sections -fdata-sections"
+MINSIZE="-flto=auto -ffunction-sections -fdata-sections"
 LDMINSIZE="-Wl,--gc-sections -flto=auto"
 CFLAGS=""
 LDFLAGS="-lgcc_eh"

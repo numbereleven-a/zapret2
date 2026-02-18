@@ -31,7 +31,7 @@ build_netlink()
 		(
 		cd $i-*
 		[ -f "Makefile" ] && make clean
-		CFLAGS="$MINSIZE $CFLAGS" \
+		CFLAGS="$OPTIMIZE $MINSIZE $CFLAGS" \
 		LDFLAGS="$LDMINSIZE $LDFLAGS" \
 		./configure --prefix= --host=$TARGET CC=$CC LD=$LD --enable-static --disable-shared --disable-dependency-tracking
 		make install -j$nproc DESTDIR=$STAGING_DIR
@@ -44,7 +44,7 @@ build_zlib()
 (
 cd zlib-*
 [ -f "Makefile" ] && make clean
-CFLAGS="$MINSIZE $CFLAGS" \
+CFLAGS="$OPTIMIZE $MINSIZE $CFLAGS" \
 LDFLAGS="$LDMINSIZE $LDFLAGS" \
 ./configure --prefix= --static
 make install -j$nproc DESTDIR=$STAGING_DIR
@@ -55,7 +55,7 @@ build_lua()
 (
 	cd lua-${LUA_RELEASE}
 	make clean
-	make CC="$CC" AR="$AR rc" CFLAGS="$MINSIZE $CFLAGS" LDFLAGS="$LDMINSIZE $LDFLAGS" linux -j$nproc
+	make CC="$CC" AR="$AR rc" CFLAGS="$OPTIMIZE $MINSIZE $CFLAGS" LDFLAGS="$LDMINSIZE $LDFLAGS" linux -j$nproc
 	make install INSTALL_TOP="$STAGING_DIR" INSTALL_BIN="$STAGING_DIR/bin" INSTALL_INC="$STAGING_DIR/include/lua${LUA_VER}" INSTALL_LIB="$STAGING_DIR/lib"
 )
 }
@@ -64,7 +64,7 @@ build_luajit()
 (
 	cd luajit2-*
 	make clean
-	make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOST_CC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP TARGET_CFLAGS="$MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS"
+	make BUILDMODE=static XCFLAGS=-DLUAJIT_DISABLE_FFI HOST_CC="$HOST_CC" CROSS= CC="$CC" TARGET_AR="$AR rcus" TARGET_STRIP=$STRIP TARGET_CFLAGS="$OPTIMIZE $MINSIZE $CFLAGS" TARGET_LDFLAGS="$LDMINSIZE $LDFLAGS"
 	make install PREFIX= DESTDIR="$STAGING_DIR"
 )
 }
