@@ -46,7 +46,7 @@ target_has_luajit()
 	return 1
 }
 
-REQD_H_FILES="/usr/include/x86_64-linux-gnu/sys/queue.h /usr/include/sys/capability.h"
+REQD_H_FILES="/usr/include/x86_64-linux-gnu/sys/queue.h /usr/include/sys/capability.h /usr/include/bits/libc-header-start.h"
 check_h_files()
 {
 	check_file $REQD_H_FILES
@@ -206,7 +206,7 @@ check_prog()
 	while [ -n "$1" ]; do
 		exists $1 || {
 			echo $1 is not available
-			echo "debian/ubuntu: apt install curl xz-utils bzip2 unzip make gcc libcap-dev pkg-config"
+			echo "debian/ubuntu: apt install curl xz-utils bzip2 unzip make gcc gcc-multilib libc6-dev libcap-dev pkg-config"
 			exit 10
 		}
 		shift

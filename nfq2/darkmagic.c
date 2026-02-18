@@ -2093,6 +2093,7 @@ static uint16_t wlan_get_family_id(struct mnl_socket* nl)
 static int wlan_info_attr_cb(const struct nlattr *attr, void *data)
 {
 	struct wlan_interface *wlan = (struct wlan_interface *)data;
+	size_t len;
 	switch(mnl_attr_get_type(attr))
 	{
 		case NL80211_ATTR_IFINDEX:
@@ -2104,12 +2105,10 @@ static int wlan_info_attr_cb(const struct nlattr *attr, void *data)
 			wlan->ifindex = mnl_attr_get_u32(attr);
 			break;
 		case NL80211_ATTR_SSID:
-			if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0)
-			{
-				DLOG_PERROR("mnl_attr_validate(ssid)");
-				return MNL_CB_ERROR;
-			}
-			snprintf(wlan->ssid,sizeof(wlan->ssid),"%s",mnl_attr_get_str(attr));
+			len = mnl_attr_get_payload_len(attr);
+			if (len>=sizeof(wlan->ssid)) len=sizeof(wlan->ssid)-1;
+			memcpy(wlan->ssid, mnl_attr_get_payload(attr), len);
+			wlan->ssid[len]=0;
 			break;
 		case NL80211_ATTR_IFNAME:
 			if (mnl_attr_validate(attr, MNL_TYPE_STRING) < 0)

@@ -248,7 +248,7 @@ void ResolveMultiPos(const uint8_t *data, size_t sz, t_l7payload l7payload, cons
 }
 
 
-static const char *http_methods[] = { "GET ","POST ","HEAD ","OPTIONS ","PUT ","DELETE ","CONNECT ","TRACE ",NULL };
+static const char *http_methods[] = { "GET ","POST ","HEAD ","OPTIONS ","PUT ","DELETE ","CONNECT ","TRACE ", "PATCH ", NULL };
 static const char *HttpMethod(const uint8_t *data, size_t len)
 {
 	const char **method;
