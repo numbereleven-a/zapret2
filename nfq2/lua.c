@@ -1658,7 +1658,7 @@ void lua_pushf_ctrack_pos(lua_State *L, const t_ctrack *ctrack, const t_ctrack_p
 	lua_pushf_lint(L,"pdcounter", pos->pdcounter);
 	lua_pushf_lint(L,"pbcounter", pos->pbcounter);
 	if (pos->ip6flow) lua_pushf_int(L,"ip6_flow", pos->ip6flow);
-	if (ctrack->ipproto == IPPROTO_TCP)
+	if (ctrack->pos.ipproto == IPPROTO_TCP)
 	{
 		lua_pushliteral(L, "tcp");
 		lua_createtable(L, 0, 11);

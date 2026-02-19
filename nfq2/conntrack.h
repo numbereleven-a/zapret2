@@ -53,7 +53,6 @@ typedef struct {
 typedef struct
 {
 	bool bCheckDone, bCheckResult, bCheckExcluded; // hostlist check result cache
-	uint8_t ipproto;
 
 	struct timespec t_start;
 

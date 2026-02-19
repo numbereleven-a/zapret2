@@ -1581,7 +1581,7 @@ static uint8_t dpi_desync_tcp_packet_play(
 
 				if (!ReasmIsEmpty(&ps.ctrack->reasm_client))
 				{
-					if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos))
+					if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos, false))
 					{
 						DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ps.ctrack->delayed));
 					}
@@ -1810,7 +1810,7 @@ static uint8_t dpi_desync_udp_packet_play(
 								}
 								if (!ReasmIsEmpty(&ps.ctrack->reasm_client))
 								{
-									if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos))
+									if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos, false))
 									{
 										DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ps.ctrack->delayed));
 									}
@@ -1850,7 +1850,7 @@ static uint8_t dpi_desync_udp_packet_play(
 									if (!reasm_client_start(ps.ctrack, IPPROTO_UDP, UDP_MAX_REASM, UDP_MAX_REASM, clean, clean_len))
 										goto rediscover_cancel;
 								}
-								if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos))
+								if (rawpacket_queue(&ps.ctrack->delayed, &ps.dst, fwmark, desync_fwmark, ifin, ifout, dis->data_pkt, dis->len_pkt, dis->len_payload, &ps.ctrack->pos, false))
 								{
 									DLOG("DELAY desync until reasm is complete (#%u)\n", rawpacket_queue_count(&ps.ctrack->delayed));
 								}
@@ -2145,12 +2145,24 @@ static bool replay_queue(struct rawpacket_tailhead *q)
 	struct rawpacket *rp;
 	size_t offset;
 	unsigned int i, count;
-	bool b = true;
 	uint8_t mod[RECONSTRUCT_MAX_SIZE];
 	size_t modlen;
+	uint32_t seq0;
+	t_ctrack_position *pos;
+	bool b = true, bseq;
 
-	for (i = 0, offset = 0, count = rawpacket_queue_count(q); (rp = rawpacket_dequeue(q)); offset += rp->len_payload, rawpacket_free(rp), i++)
+	for (i = 0, offset = 0, count = rawpacket_queue_count(q); (rp = rawpacket_dequeue(q)); rawpacket_free(rp), i++)
 	{
+		// TCP: track reasm_offset using sequence numbers
+		if ((bseq = rp->tpos_present && rp->tpos.ipproto==IPPROTO_TCP))
+		{
+			pos = rp->server_side ? &rp->tpos.server : &rp->tpos.client;
+			if (i)
+				offset = pos->seq_last - seq0;
+			else
+				seq0 = pos->seq_last;
+		}
+
 		DLOG("REPLAYING delayed packet #%u offset %zu\n", i+1, offset);
 		modlen = sizeof(mod);
 		uint8_t verdict = dpi_desync_packet_play(i, count, offset, rp->fwmark_orig, rp->ifin, rp->ifout, rp->tpos_present ? &rp->tpos : NULL, rp->packet, rp->len, mod, &modlen);
@@ -2168,6 +2180,9 @@ static bool replay_queue(struct rawpacket_tailhead *q)
 			DLOG("DROPPING delayed packet #%u\n", i+1);
 			break;
 		}
+
+		if (!bseq)
+			offset += rp->len_payload;
 	}
 	return b;
 }

@@ -288,7 +288,7 @@ static bool ConntrackPoolFeedPool(t_conntrack_pool **pp, const struct dissect *d
 	}
 	return false;
 ok:
-	ctr->track.ipproto = proto;
+	ctr->track.pos.ipproto = proto;
 	if (ctrack) *ctrack = &ctr->track;
 	if (bReverse) *bReverse = b_rev;
 	return true;
