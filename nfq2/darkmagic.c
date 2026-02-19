@@ -335,7 +335,7 @@ void str_tcphdr(char *s, size_t s_len, const struct tcphdr *tcphdr)
 	if (tcphdr->th_flags & TH_PUSH) *f++='P';
 	if (tcphdr->th_flags & TH_URG) *f++='U';
 	*f=0;
-	snprintf(s,s_len,"sport=%u dport=%u flags=%s seq=%u ack_seq=%u",htons(tcphdr->th_sport),htons(tcphdr->th_dport),flags,htonl(tcphdr->th_seq),htonl(tcphdr->th_ack));
+	snprintf(s,s_len,"sport=%u dport=%u flags=%s seq=%u ack_seq=%u",ntohs(tcphdr->th_sport),ntohs(tcphdr->th_dport),flags,ntohl(tcphdr->th_seq),ntohl(tcphdr->th_ack));
 }
 void print_tcphdr(const struct tcphdr *tcphdr)
 {
@@ -345,7 +345,7 @@ void print_tcphdr(const struct tcphdr *tcphdr)
 }
 void str_udphdr(char *s, size_t s_len, const struct udphdr *udphdr)
 {
-	snprintf(s,s_len,"sport=%u dport=%u",htons(udphdr->uh_sport),htons(udphdr->uh_dport));
+	snprintf(s,s_len,"sport=%u dport=%u",ntohs(udphdr->uh_sport),ntohs(udphdr->uh_dport));
 }
 void print_udphdr(const struct udphdr *udphdr)
 {
