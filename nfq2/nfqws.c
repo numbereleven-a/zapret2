@@ -365,6 +365,8 @@ static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *m
 		// dot not fail. not supported in old linuxes <3.6 
 	}
 
+	nfnl_rcvbufsiz(nfq_nfnlh(*h), Q_RCVBUF);
+
 	int yes = 1, fd = nfq_fd(*h);
 
 #if defined SOL_NETLINK && defined NETLINK_NO_ENOBUFS
