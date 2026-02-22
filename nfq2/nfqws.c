@@ -43,6 +43,7 @@
 #endif
 
 #ifdef __linux__
+#include <sys/ioctl.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #define NF_DROP 0
 #define NF_ACCEPT 1
@@ -240,6 +241,13 @@ static int write_pidfile(FILE **Fpid)
 
 
 #ifdef __linux__
+
+struct nfq_cb_data
+{
+	uint8_t *mod;
+	int sock;
+};
+
 // cookie must point to mod buffer with size RECONSTRUCT_MAX_SIZE
 static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *cookie)
 {
@@ -248,10 +256,10 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 	struct nfqnl_msg_packet_hdr *ph;
 	uint8_t *data;
 	uint32_t ifidx_out, ifidx_in;
-	char ifout[IFNAMSIZ], ifin[IFNAMSIZ];
 	size_t modlen;
-	uint8_t *mod = (uint8_t*)cookie;
+	struct nfq_cb_data *cbdata = (struct nfq_cb_data*)cookie;
 	uint32_t mark;
+	struct ifreq ifr_in, ifr_out;
 
 	ph = nfq_get_msg_packet_hdr(nfa);
 	id = ph ? ntohl(ph->packet_id) : 0;
@@ -259,15 +267,25 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 	mark = nfq_get_nfmark(nfa);
 	ilen = nfq_get_payload(nfa, &data);
 
+	*ifr_out.ifr_name = 0;
 	ifidx_out = nfq_get_outdev(nfa);
-	*ifout = 0;
-	if (ifidx_out) if_indextoname(ifidx_out, ifout);
+	if (ifidx_out)
+	{
+		ifr_out.ifr_ifindex = ifidx_out;
+		if (ioctl(cbdata->sock, SIOCGIFNAME, &ifr_out)<0)
+			DLOG_PERROR("ioctl(SIOCGIFNAME)");
+	}
 
+	*ifr_in.ifr_name = 0;
 	ifidx_in = nfq_get_indev(nfa);
-	*ifin = 0;
-	if (ifidx_in) if_indextoname(ifidx_in, ifin);
+	if (ifidx_in)
+	{
+		ifr_in.ifr_ifindex = ifidx_in;
+		if (ioctl(cbdata->sock, SIOCGIFNAME, &ifr_in)<0)
+			DLOG_PERROR("ioctl(SIOCGIFNAME)");
+	}
 
-	DLOG("\npacket: id=%d len=%d mark=%08X ifin=%s(%u) ifout=%s(%u)\n", id, ilen, mark, ifin, ifidx_in, ifout, ifidx_out);
+	DLOG("\npacket: id=%d len=%d mark=%08X ifin=%s(%u) ifout=%s(%u)\n", id, ilen, mark, ifr_in.ifr_name, ifidx_in, ifr_out.ifr_name, ifidx_out);
 
 	if (ilen >= 0)
 	{
@@ -277,12 +295,12 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 		// to support increased sizes use separate mod buffer
 		// this is not a problem because only LUA code can trigger VERDICT_MODIFY (and postnat workaround too, once a connection if first packet is dropped)
 		// in case of VERIDCT_MODIFY packet is always reconstructed from dissect, so no difference where to save the data => no performance loss
-		uint8_t verdict = processPacketData(&mark, ifin, ifout, data, len, mod, &modlen);
+		uint8_t verdict = processPacketData(&mark, ifr_in.ifr_name, ifr_out.ifr_name, data, len, cbdata->mod, &modlen);
 		switch (verdict & VERDICT_MASK)
 		{
 		case VERDICT_MODIFY:
 			DLOG("packet: id=%d pass modified. len %zu => %zu\n", id, len, modlen);
-			return nfq_set_verdict2(qh, id, NF_ACCEPT, mark, (uint32_t)modlen, mod);
+			return nfq_set_verdict2(qh, id, NF_ACCEPT, mark, (uint32_t)modlen, cbdata->mod);
 		case VERDICT_DROP:
 			DLOG("packet: id=%d drop\n", id);
 			return nfq_set_verdict2(qh, id, NF_DROP, mark, 0, NULL);
@@ -306,7 +324,7 @@ static void nfq_deinit(struct nfq_handle **h, struct nfq_q_handle **qh)
 		*h = NULL;
 	}
 }
-static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *mod_buffer)
+static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, struct nfq_cb_data *cbdata)
 {
 	nfq_deinit(h, qh);
 
@@ -343,7 +361,7 @@ static bool nfq_init(struct nfq_handle **h, struct nfq_q_handle **qh, uint8_t *m
 	}
 
 	DLOG_CONDUP("binding this socket to queue '%u'\n", params.qnum);
-	*qh = nfq_create_queue(*h, params.qnum, &nfq_cb, mod_buffer);
+	*qh = nfq_create_queue(*h, params.qnum, &nfq_cb, cbdata);
 	if (!*qh) {
 		DLOG_PERROR("nfq_create_queue()");
 		goto exiterr;
@@ -399,6 +417,7 @@ static int nfq_main(void)
 	ssize_t rd;
 	FILE *Fpid = NULL;
 	uint8_t *buf=NULL, *mod=NULL;
+	struct nfq_cb_data cbdata = { .sock = -1 };
 
 	if (*params.pidfile && !(Fpid = fopen(params.pidfile, "w")))
 	{
@@ -440,13 +459,19 @@ static int nfq_main(void)
 		goto exok;
 	}
 
-	if (!(buf = malloc(NFQ_MAX_RECV_SIZE)) || !(mod = malloc(RECONSTRUCT_MAX_SIZE)))
+	if (!(buf = malloc(NFQ_MAX_RECV_SIZE)) || !(cbdata.mod = malloc(RECONSTRUCT_MAX_SIZE)))
 	{
 		DLOG_ERR("out of memory\n");
 		goto err;
 	}
 
-	if (!nfq_init(&h, &qh, mod))
+	if ((cbdata.sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		DLOG_PERROR("socket");
+		goto err;
+	}
+
+	if (!nfq_init(&h, &qh, &cbdata))
 		goto err;
 
 #ifdef HAS_FILTER_SSID
@@ -500,7 +525,8 @@ static int nfq_main(void)
 exok:
 	res=0;
 ex:
-	free(mod);
+	free(cbdata.mod);
+	if (cbdata.sock>=0) close(cbdata.sock);
 	free(buf);
 	nfq_deinit(&h, &qh);
 	lua_shutdown();
