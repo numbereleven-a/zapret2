@@ -565,7 +565,7 @@ bool TLSFindExtLenOffsetInHandshake(const uint8_t *data, size_t len, size_t *off
 }
 bool TLSFindExtLen(const uint8_t *data, size_t len, size_t *off)
 {
-	if (!TLSFindExtLenOffsetInHandshake(data+5,len-5,off))
+	if (len<5 || !TLSFindExtLenOffsetInHandshake(data+5,len-5,off))
 		return false;
 	*off+=5;
 	return true;

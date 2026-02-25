@@ -1905,11 +1905,24 @@ static bool lua_reconstruct_ip6exthdr(lua_State *L, int idx, struct ip6_hdr *ip6
 				lua_getfield(L,-1, "data");
 				if (lua_type(L,-1)!=LUA_TSTRING) goto err;
 				if (!(p=(uint8_t*)lua_tolstring(L,-1,&l))) l=0;
-				if (l<6 || (l+2)>left || (type==IPPROTO_AH ? (l>=1024 || ((l+2) & 3)) : (l>=2048 || ((l+2) & 7)))) goto err;
-				memcpy(data+2,p,l);
-				l+=2;
+
+				if (l<6 || (l+2)>left) goto err;
+				if (type==IPPROTO_AH)
+				{
+					if (l>=1024 || ((l+2) & 3)) goto err;
+					memcpy(data+2,p,l);
+					l+=2;
+					data[1] = (l>>2)-2;
+				}
+				else
+				{
+					if (l>=2048 || ((l+2) & 7)) goto err;
+					memcpy(data+2,p,l);
+					l+=2;
+					data[1] = (l>>3)-1;
+				}
+
 				data[0] = next; // may be overwritten later
-				data[1] = (type==IPPROTO_AH) ? (l>>2)-2 : (l>>3)-1;
 				if (!preserve_next) *last_proto = type;
 				last_proto = data; // first byte of header holds type
 				left -= l; data += l; filled += l;

@@ -260,8 +260,8 @@ static int nfq_cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_da
 	uint32_t mark;
 	struct ifreq ifr_in, ifr_out;
 
-	ph = nfq_get_msg_packet_hdr(nfa);
-	id = ph ? ntohl(ph->packet_id) : 0;
+	if (!(ph = nfq_get_msg_packet_hdr(nfa))) return 0; // should not happen
+	id = ntohl(ph->packet_id);
 
 	mark = nfq_get_nfmark(nfa);
 	ilen = nfq_get_payload(nfa, &data);
@@ -666,6 +666,7 @@ static int dvt_main(void)
 				if (rd < 0)
 				{
 					DLOG_PERROR("recvfrom");
+					if (errno==ENOBUFS) continue;
 					goto exiterr;
 				}
 				else if (rd > 0)

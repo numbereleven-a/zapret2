@@ -98,10 +98,10 @@ function detect_payload_str(ctx, desync)
 	local data = desync.reasm_data or desync.dis.payload
 	local b = data and string.find(data,desync.arg.pattern,1,true)
 	if b then
-		DLOG("detect_payload_str: detected '"..desync.arg.payload.."'")
+		DLOG("detect_payload_str: detected '"..(desync.arg.payload or '?').."'")
 		if desync.arg.payload then desync.l7payload = desync.arg.payload end
 	else
-		DLOG("detect_payload_str: not detected '"..desync.arg.payload.."'")
+		DLOG("detect_payload_str: not detected '"..(desync.arg.payload or '?').."'")
 		if desync.arg.undetected then desync.l7payload = desync.arg.undetected end
 	end
 end
@@ -1201,7 +1201,7 @@ function rawsend_dissect_segmented(desync, dis, mss, options)
 					-- stop if failed
 					return false
 				end
-				discopy.tcp.th_seq = discopy.tcp.th_seq + len
+				discopy.tcp.th_seq = u32add(discopy.tcp.th_seq, len)
 				pos = pos + len
 			end
 			return true
