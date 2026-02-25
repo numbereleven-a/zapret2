@@ -458,6 +458,7 @@ jobs:
           cp -a -t output psmisc/psmisc-*.src/psmisc-*/inst/usr/bin/killall.exe /usr/bin/cygwin1.dll &&
           wget -O WinDivert.zip https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip &&
           unzip -j WinDivert.zip "*/${DIR}/WinDivert.dll" "*/${DIR}/WinDivert${BITS}.sys" -d output &&
+          peflags --dynamicbase=true output/WinDivert.dll &&
           zip zapret2-win-${{ matrix.arch }}.zip -j output/*
 
       - name: Upload artifacts
