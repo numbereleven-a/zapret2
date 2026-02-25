@@ -2,7 +2,7 @@ CC ?= cc
 PKG_CONFIG ?= pkg-config
 OPTIMIZE ?= -Oz
 MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections
-CFLAGS += -std=gnu99 -s $(OPTIMIZE) $(MINSIZE) -Wno-address-of-packed-member
+CFLAGS += -std=gnu99 -s $(OPTIMIZE) $(MINSIZE) -Wno-address-of-packed-member -pie
 LDFLAGS += -flto=auto -Wl,--gc-sections
 LIBS = -lz -lm
 SRC_FILES = *.c crypto/*.c

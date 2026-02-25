@@ -5,7 +5,7 @@ MINSIZE ?= -flto=auto -ffunction-sections -fdata-sections
 CFLAGS += -std=gnu99 $(OPTIMIZE) $(MINSIZE)
 CFLAGS_LINUX = -Wno-alloc-size-larger-than
 CFLAGS_SYSTEMD = -DUSE_SYSTEMD
-CFLAGS_BSD = -Wno-address-of-packed-member
+CFLAGS_BSD = -Wno-address-of-packed-member -pie
 CFLAGS_CYGWIN = -Wno-address-of-packed-member -static -Wl,--nxcompat
 CFLAGS_CYGWIN32 =
 CFLAGS_CYGWIN64 = -Wl,--dynamicbase -Wl,--high-entropy-va
