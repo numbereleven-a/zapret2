@@ -6,8 +6,9 @@ CFLAGS += -std=gnu99 $(OPTIMIZE) $(MINSIZE)
 CFLAGS_LINUX = -Wno-alloc-size-larger-than
 CFLAGS_SYSTEMD = -DUSE_SYSTEMD
 CFLAGS_BSD = -Wno-address-of-packed-member
-CFLAGS_CYGWIN = -Wno-address-of-packed-member -static
+CFLAGS_CYGWIN = -Wno-address-of-packed-member -static -Wl,--nxcompat
 CFLAGS_CYGWIN32 =
+CFLAGS_CYGWIN64 = -Wl,--dynamicbase -Wl,--high-entropy-va
 CFLAGS_UBSAN = -fsanitize=undefined,alignment -fno-sanitize-recover=undefined,alignment
 LDFLAGS += -flto=auto -Wl,--gc-sections
 LDFLAGS_ANDROID = -llog
@@ -153,7 +154,7 @@ bsd: $(SRC_FILES)
 	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_BSD) -o dvtws2 $(SRC_FILES) $(LIBS) $(LUA_LIB) $(LIBS_BSD) $(LDFLAGS)
 
 cygwin64:
-	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_CYGWIN) -o winws2 $(SRC_FILES) $(RES_CYGWIN64) $(LIBS) $(LUA_LIB) $(LIBS_CYGWIN) $(LIBS_CYGWIN64) $(LDFLAGS)
+	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_CYGWIN) $(CFLAGS_CYGWIN64) -o winws2 $(SRC_FILES) $(RES_CYGWIN64) $(LIBS) $(LUA_LIB) $(LIBS_CYGWIN) $(LIBS_CYGWIN64) $(LDFLAGS)
 cygwin32:
 	$(CC) -s $(CFLAGS) $(LUA_CFL) $(CFLAGS_CYGWIN) $(CFLAGS_CYGWIN32) -o winws2 $(SRC_FILES) $(RES_CYGWIN32) $(LIBS) $(LUA_LIB) $(LIBS_CYGWIN) $(LIBS_CYGWIN32) $(LDFLAGS)
 cygwin: cygwin64
