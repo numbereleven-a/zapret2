@@ -109,7 +109,7 @@ jobs:
             LEXRA=1
           else
             STATIC="-static"
-          end
+          fi
           if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == riscv64 ]] || [[ "$ARCH" == x86 ]] ; then
             # use classic lua
             wget -qO- https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz
