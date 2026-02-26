@@ -101,17 +101,14 @@ jobs:
           export STAGING_DIR=$RUNNER_TEMP
           if [ "$ARCH" = lexra ]; then
             OPTIMIZE=-Os
+            STATIC=-static
           else
             OPTIMIZE=-Oz
+            STATIC=-static-pie
+            LEXRA=1
           fi
           MINSIZE="$OPTIMIZE $MINSIZE"
 
-          if [ "$ARCH" = lexra ] ; then
-            STATIC="-static-pie"
-            LEXRA=1
-          else
-            STATIC="-static"
-          fi
           if [[ "$ARCH" == lexra ]] || [[ "$ARCH" == riscv64 ]] || [[ "$ARCH" == x86 ]] ; then
             # use classic lua
             wget -qO- https://www.lua.org/ftp/lua-${LUA_RELEASE}.tar.gz | tar -xz
