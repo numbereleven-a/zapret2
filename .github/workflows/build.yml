@@ -100,12 +100,12 @@ jobs:
           export PKG_CONFIG_PATH=$DEPS_DIR/lib/pkgconfig
           export STAGING_DIR=$RUNNER_TEMP
           if [ "$ARCH" = lexra ]; then
+            LEXRA=1
             OPTIMIZE=-Os
             STATIC=-static
           else
             OPTIMIZE=-Oz
             STATIC=-static-pie
-            LEXRA=1
           fi
           MINSIZE="$OPTIMIZE $MINSIZE"
 
