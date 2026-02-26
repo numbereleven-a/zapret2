@@ -99,9 +99,7 @@ jobs:
           export STRIP=$TARGET-strip
           export PKG_CONFIG_PATH=$DEPS_DIR/lib/pkgconfig
           export STAGING_DIR=$RUNNER_TEMP
-          STATIC=-static
           if [ "$ARCH" = lexra ]; then
-            LEXRA=1
             OPTIMIZE=-Os
           else
             OPTIMIZE=-Oz
@@ -172,9 +170,9 @@ jobs:
 
           # zapret2
           OPTIMIZE=$OPTIMIZE \
-          CFLAGS="-DZAPRET_GH_VER=${{ github.ref_name }} -DZAPRET_GH_HASH=${{ github.sha }} -static-libgcc $STATIC -I$DEPS_DIR/include $CFLAGS" \
+          CFLAGS="-DZAPRET_GH_VER=${{ github.ref_name }} -DZAPRET_GH_HASH=${{ github.sha }} -static-libgcc -I$DEPS_DIR/include $CFLAGS" \
           LDFLAGS="-L$DEPS_DIR/lib $LDFLAGS" \
-          make -C zapret2 ${LEXRA:+CFLAGS_PIC= LDFLAGS_PIE=} LUA_JIT=$LJIT LUA_CFLAGS="$LCFLAGS" LUA_LIB="$LLIB" -j$(nproc)
+          make -C zapret2 CFLAGS_PIC= LDFLAGS_PIE=-static LUA_JIT=$LJIT LUA_CFLAGS="$LCFLAGS" LUA_LIB="$LLIB" -j$(nproc)
 
           tar -C zapret2/binaries/my -cJf zapret2-linux-$ARCH.tar.xz .
 
