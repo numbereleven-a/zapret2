@@ -894,7 +894,7 @@ function fakedsplit(ctx, desync)
 					return desync.arg.nodrop and VERDICT_PASS or VERDICT_DROP
 				end
 			else
-				DLOG("fakedsplit: cannot resolve pos '"..desync.arg.pos.."'")
+				DLOG("fakedsplit: cannot resolve pos '"..spos.."'")
 			end
 		else
 			DLOG("fakedsplit: not acting on further replay pieces")
@@ -1009,7 +1009,7 @@ function fakeddisorder(ctx, desync)
 					return desync.arg.nodrop and VERDICT_PASS or VERDICT_DROP
 				end
 			else
-				DLOG("fakeddisorder: cannot resolve pos '"..desync.arg.pos.."'")
+				DLOG("fakeddisorder: cannot resolve pos '"..spos.."'")
 			end
 		else
 			DLOG("fakeddisorder: not acting on further replay pieces")
