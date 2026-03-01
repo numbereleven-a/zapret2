@@ -2031,7 +2031,7 @@ bool lua_reconstruct_iphdr(lua_State *L, int idx, struct ip *ip, size_t *len)
 
 	LUA_STACK_GUARD_ENTER(L)
 
-	if (*len<sizeof(struct ip) || lua_type(L,-1)!=LUA_TTABLE) return false;
+	if (*len<sizeof(struct ip) || lua_type(L,idx)!=LUA_TTABLE) return false;
 
 	ip->ip_v = IPVERSION;
 
@@ -2201,7 +2201,7 @@ err:
 }
 bool lua_reconstruct_tcphdr(lua_State *L, int idx, struct tcphdr *tcp, size_t *len)
 {
-	if (*len<sizeof(struct tcphdr) || lua_type(L,-1)!=LUA_TTABLE) return false;
+	if (*len<sizeof(struct tcphdr) || lua_type(L,idx)!=LUA_TTABLE) return false;
 
 	LUA_STACK_GUARD_ENTER(L)
 
@@ -2276,7 +2276,7 @@ static int luacall_reconstruct_tcphdr(lua_State *L)
 
 bool lua_reconstruct_udphdr(lua_State *L, int idx, struct udphdr *udp)
 {
-	if (lua_type(L,-1)!=LUA_TTABLE) return false;
+	if (lua_type(L,idx)!=LUA_TTABLE) return false;
 
 	LUA_STACK_GUARD_ENTER(L)
 
@@ -2320,7 +2320,7 @@ static int luacall_reconstruct_udphdr(lua_State *L)
 
 bool lua_reconstruct_icmphdr(lua_State *L, int idx, struct icmp46 *icmp)
 {
-	if (lua_type(L,-1)!=LUA_TTABLE) return false;
+	if (lua_type(L,idx)!=LUA_TTABLE) return false;
 
 	LUA_STACK_GUARD_ENTER(L)
 

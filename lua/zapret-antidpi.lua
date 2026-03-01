@@ -1210,8 +1210,8 @@ function udplen(ctx, desync)
 				else
 					desync.dis.payload = string.sub(desync.dis.payload,1,len+inc)
 					DLOG("udplen: "..len.." => "..#desync.dis.payload)
+					return VERDICT_MODIFY
 				end
-				return VERDICT_MODIFY
 			end
 		end
 	end

@@ -780,6 +780,7 @@ function test_csum()
 	print( raw==udpb and "UDP RECONSTRUCT OK" or "UDP RECONSTRUCT FAILED" )
 	test_assert(raw==udpb)
 
+	ip.ip_p = IPPROTO_UDP
 	raw = reconstruct_dissect({ip=ip, udp=udp, payload=payload})
 	dis1 = dissect(raw)
 	ip.ip_p = IPPROTO_UDP
