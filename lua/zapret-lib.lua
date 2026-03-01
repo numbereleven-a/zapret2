@@ -962,7 +962,7 @@ function apply_fooling(desync, dis, fooling_options)
 			end
 		end
 		if fooling_options.tcp_ts_up then
-			move_ts_top(dis.tcp.options)
+			move_ts_top()
 		end
 	end
 	if dis.ip6 then
