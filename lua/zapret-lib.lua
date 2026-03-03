@@ -149,6 +149,8 @@ end
 
 -- applies # and $ prefixes. #var means var length, %var means var value
 function apply_arg_prefix(desync)
+	-- prevent double apply
+	if desync.arg.__prefix_applied then return end
 	for a,v in pairs(desync.arg) do
 		local c = string.sub(v,1,1)
 		if c=='#' then
@@ -163,6 +165,7 @@ function apply_arg_prefix(desync)
 			end
 		end
 	end
+	desync.arg.__prefix_applied = true
 end
 -- copy instance identification and args from execution plan to desync table
 -- NOTE : to not lose VERDICT_MODIFY dissect changes pass original desync table
@@ -202,6 +205,7 @@ function plan_instance_execute_preapplied(desync, verdict, instance)
 	else
 		-- condition is satisfied. here blobs must be referenced
 		apply_arg_prefix(desync)
+		desync.arg.__prefix_applied = nil
 		DLOG("plan_instance_execute: calling '"..desync.func_instance.."'")
 		verdict = verdict_aggregate(verdict,_G[instance.func](nil, desync))
 	end
